@@ -10,6 +10,12 @@ Why these two (from the 2026-10-26 research review, `~/vault/research/decision-m
 - **Flash readout**: the already-loaded flash-next answers a multiple-choice question in one forward pass (`max_tokens: 1`, thinking off) and its option-letter logprobs become probabilities. It needs no extra memory (only about 8 GB is free next to flash at `GPU_MEM=0.80`). Large-LLM readout has the best external evidence available (so1 readout on Qwen3.6-27B scored 73.7 vs Jev-1.13's 72.7).
 - **Decima-small**: a 122M encoder, already running as a systemd user service on `127.0.0.1:8017` (`POST /v1/systemone`, Jev wire format). It takes 10–30 ms on CPU, gives the same answer whatever the option order, and is reasonably calibrated. It is the likely fallback when flash is loading or busy.
 
+## Speed requirement (Michael's call, 2026-10-26)
+
+The decision must be fast on every message: **it may add at most 300 ms before the model starts replying.** The router classifies once per user-typed message (`reason: "user"`), never on tool-call continuations.
+
+To guarantee that bound, the intended router design runs **both classifiers at the same time** on every message. Flash readout's answer is used if it arrives within 300 ms; otherwise Decima's answer, which is always ready in 10–30 ms, is used. The worst-case added delay therefore equals the budget, never budget + fallback. The benchmark evaluates exactly this policy.
+
 ## Goals
 
 1. Two classifier clients with the same interface: input = conversation context, output = probabilities over four levels + latency + error.
@@ -46,7 +52,7 @@ Both classifiers are asked this same four-way question directly, with the same o
 
 **Input to both classifiers**: the user message being routed, plus the previous assistant message trimmed to its last ~600 characters when one exists, so "yes, go ahead" is judged in context. Decima has a 512-token state limit, so the same trimmed input goes to both. Long user messages are trimmed head+tail to fit, identically for both.
 
-**Flash readout mechanics** (verified working 2026-10-26): `POST http://localhost:9000/v1/chat/completions`, model `qwen3.8-flash-next`, `chat_template_kwargs: {enable_thinking: false}`, `max_tokens: 1`, `temperature: 0`, `logprobs: true`, `top_logprobs: 20`. Sum the probability mass of tokens that strip to `A`/`B`/`C`/`D` (e.g. `"D"` and `" D"`), then renormalize over the four. Before each readout, check `GET localhost:9000/running`. If flash isn't the running model, record the item as "unavailable" instead of sending a request that would make llama-swap swap models. Observed latency: ~210 ms warm, ~830 ms cold.
+**Flash readout mechanics** (verified working 2026-10-26): `POST http://localhost:9000/v1/chat/completions`, model `qwen3.8-flash-next`, `chat_template_kwargs: {enable_thinking: false}`, `max_tokens: 1`, `temperature: 0`, `logprobs: true`, `top_logprobs: 20`. Sum the probability mass of tokens that strip to `A`/`B`/`C`/`D` (e.g. `"D"` and `" D"`), then renormalize over the four. Before each readout, check `GET localhost:9000/running`. If flash isn't the running model, record the item as "unavailable" instead of sending a request that would make llama-swap swap models. Observed latency (idle): ~210 ms warm, ~830 ms cold. The readout prompt puts the fixed instructions first and the message last, so vLLM's prefix cache can reuse the instruction tokens.
 
 **When flash is unavailable during a run** *(Claude's call)*: the runner pauses and polls `/running` until flash is back, rather than skipping, so both classifiers are scored on identical items. Items still unanswered after a long wait (~10 min) are re-run in a later pass. The headline comparison uses only items both classifiers answered. The cascade simulation uses measured latencies, not live outages. The small gap between checking `/running` and sending the request is accepted: llama-swap swaps only when a request for another model arrives, and a pre-run note tells Michael to keep the other models idle during the run.
 
@@ -63,8 +69,10 @@ Both classifiers are asked this same four-way question directly, with the same o
 - a severity-weighted error (distance between predicted and true level), and confusion matrix
 - under-thinking vs over-thinking misses, counted separately (under is worse: wrong answers; over is just slower)
 - calibration: accuracy bucketed by top-probability confidence, plus ECE
-- latency p50 / p95, and error/unavailable counts
-- simulated cascade: flash, falling back to Decima when flash is unavailable or slower than an 800 ms budget; and Decima alone with flash consulted below a confidence threshold. Report accuracy and latency for each.
+- latency p50 / p95 / max, and error/unavailable counts, measured in **two conditions**: flash idle, and flash busy (a separate long generation streaming on flash while the classifier calls run, with the same load for every item). Decima is timed in both conditions too.
+- for flash readout: the share of items answered within the 300 ms budget, idle and busy
+- **the 300 ms race policy** (both run at once; flash's answer if it arrives within 300 ms, else Decima's): accuracy and added delay, idle and busy. This is the headline number.
+- for comparison: Decima alone, and flash alone with no budget
 
 **Code**: TypeScript in a new local git repo `~/workspace/flash-auto` (no remote until Michael says). Classifier clients are written so the later pi extension can import them unchanged. The benchmark is a node script reusing them. `ROUTER_PLAN.md` is **copied** here from `~/jeff` and annotated as superseded by this phase's results *(Claude's call)*. `~/jeff` is left untouched, since the original is uncommitted there and deleting it would be irreversible.
 
