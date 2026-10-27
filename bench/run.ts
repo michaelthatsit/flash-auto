@@ -54,6 +54,9 @@ export async function runBenchmark(opts: {
 	isFlashRunning: () => Promise<boolean>;
 	load?: LoadHandle;
 	waitOpts?: WaitOpts;
+	/** Pause between items, to measure latency at a realistic cadence instead of back-to-back. */
+	gapMs?: number;
+	sleep?: (ms: number) => Promise<void>;
 }): Promise<{ written: number; skipped: number; missing: string[] }> {
 	const done = new Set(readRows(opts.outFile).filter((r) => r.flash.ok && r.decima.ok).map((r) => r.itemId));
 	const todo = opts.items.filter((it) => !done.has(it.id));
@@ -62,7 +65,9 @@ export async function runBenchmark(opts: {
 	if (todo.length && (await waitForFlash(opts.isFlashRunning, opts.waitOpts))) {
 		await opts.flash.classify({ prompt: "hello" }); // warm-up, discarded
 	}
-	for (const item of todo) {
+	const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+	for (const [i, item] of todo.entries()) {
+		if (i > 0 && opts.gapMs) await sleep(opts.gapMs);
 		if (!(await waitForFlash(opts.isFlashRunning, opts.waitOpts))) {
 			missing.push(item.id);
 			continue;
@@ -86,15 +91,18 @@ export async function runBenchmark(opts: {
 }
 
 if (import.meta.main) {
-	const { values } = parseArgs({ options: { set: { type: "string" }, condition: { type: "string" } } });
+	const { values } = parseArgs({
+		options: { set: { type: "string" }, condition: { type: "string" }, "gap-ms": { type: "string" }, limit: { type: "string" }, out: { type: "string" } },
+	});
 	const set = values.set as "dev" | "test";
 	const condition = values.condition as "idle" | "busy";
 	if (!["dev", "test"].includes(set) || !["idle", "busy"].includes(condition)) {
-		console.error("usage: node bench/run.ts --set dev|test --condition idle|busy");
+		console.error("usage: node bench/run.ts --set dev|test --condition idle|busy [--gap-ms N --limit N --out file]");
 		process.exit(2);
 	}
 	console.log("Keep qwen3.8-27b / qwen3.6-35b idle during the run (a request to them would swap flash out).");
-	const items = readFileSync("data/testset.jsonl", "utf8").trim().split("\n").map((l) => JSON.parse(l) as LabeledItem).filter((it) => it.split === set);
+	const items = readFileSync("data/testset.jsonl", "utf8").trim().split("\n").map((l) => JSON.parse(l) as LabeledItem).filter((it) => it.split === set)
+		.slice(0, values.limit ? Number(values.limit) : undefined);
 	let load: LoadHandle | undefined;
 	if (condition === "busy") {
 		load = startLoad();
@@ -111,7 +119,8 @@ if (import.meta.main) {
 	const res = await runBenchmark({
 		items,
 		condition,
-		outFile: `results/${set}-${condition}.jsonl`,
+		outFile: values.out ?? `results/${set}-${condition}.jsonl`,
+		gapMs: values["gap-ms"] ? Number(values["gap-ms"]) : undefined,
 		flash: createFlashClassifier(),
 		decima: createDecimaClassifier(),
 		isFlashRunning: () => isFlashRunning(),

@@ -115,3 +115,18 @@ test("both run concurrently", async () => {
 	// warm-up (100 ms) + one item with both in parallel (~100 ms)
 	assert.ok(performance.now() - start < 280);
 });
+
+test("gapMs pauses between items, not before the first", async () => {
+	const slept: number[] = [];
+	await runBenchmark({
+		items: [item("a"), item("b"), item("c")],
+		condition: "idle",
+		outFile: outFile(),
+		flash: fake("flash").c,
+		decima: fake("decima").c,
+		isFlashRunning: async () => true,
+		gapMs: 45_000,
+		sleep: async (ms) => void slept.push(ms),
+	});
+	assert.deepEqual(slept, [45_000, 45_000]);
+});
