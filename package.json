@@ -7,7 +7,16 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@earendil-works/pi-coding-agent": "file:../../.pi/agent/install/releases/1.0.2/node_modules/@earendil-works/pi-coding-agent",
     "@types/node": "^26.6.5",
     "typescript": "^7.0.2"
+  },
+  "keywords": [
+    "pi-package"
+  ],
+  "pi": {
+    "extensions": [
+      "./src/extension.ts"
+    ]
   }
 }
