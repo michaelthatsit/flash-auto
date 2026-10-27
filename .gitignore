@@ -1,1 +1,7 @@
 node_modules/
+
+# Private: real pi messages and per-session result rows (kept local)
+data/turns.jsonl
+data/labels.md
+data/testset.jsonl
+results/*.jsonl

@@ -28,3 +28,7 @@ No wording was changed after the dev run: Decima instruction variants moved dev 
 - **Decision log:** `~/.pi/agent/flash-auto.jsonl`, one line per message: level, source, confidence, probabilities, latency. No prompt text.
 - **Installed** as a local pi package: `"../../workspace/flash-auto"` in `~/.pi/agent/settings.json` → `packages`. To disable it, remove that line (backup: `settings.json.bak-2026-10-26`).
 - **Needs** the flash entry in `~/.pi/agent/models.json` from `docs/models-json-change.md` (true-zero off). To add another model, add an entry to `src/models.ts` and benchmark it first (`bench/`).
+
+## Benchmark data
+
+The labelled test set (`data/turns.jsonl`, `data/labels.md`, `data/testset.jsonl`) and the per-item result rows (`results/*.jsonl`) contain real pi messages and session names, so they're kept out of the repo. `results/REPORT*.md` are the published results. To benchmark on your own sessions: `node bench/turns.ts` → label `data/labels.md` → `node bench/labels.ts build` → `node bench/run.ts` → `node bench/report.ts`.
