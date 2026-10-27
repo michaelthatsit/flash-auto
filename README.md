@@ -18,3 +18,13 @@ npm run typecheck
 - decima prompt version `c2c6a3880e09`
 
 No wording was changed after the dev run: Decima instruction variants moved dev accuracy by at most one item (noise), and the level descriptions are fixed by the spec.
+
+## flash-auto (pi router)
+
+`spark/flash-auto` is a virtual model: every request goes to `spark/qwen3.8-flash-next`, and flash picks the reasoning level (off / low / medium / xhigh) for each message you type with a one-token readout (~240 ms, 500 ms hard budget).
+
+- **Same level for the whole turn:** tool-call steps and retries reuse it. Short go-ahead replies ("do it", "yes", "continue"…) and messages typed mid-turn keep the previous level.
+- **Never triggers a model swap:** if flash isn't loaded, or the decision fails or takes over 500 ms, it uses the previous level, else medium.
+- **Decision log:** `~/.pi/agent/flash-auto.jsonl`, one line per message: level, source, confidence, probabilities, latency. No prompt text.
+- **Installed** as a local pi package: `"../../workspace/flash-auto"` in `~/.pi/agent/settings.json` → `packages`. To disable it, remove that line (backup: `settings.json.bak-2026-10-26`).
+- **Needs** the flash entry in `~/.pi/agent/models.json` from `docs/models-json-change.md` (true-zero off). To add another model, add an entry to `src/models.ts` and benchmark it first (`bench/`).
