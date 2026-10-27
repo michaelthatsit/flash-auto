@@ -6,7 +6,7 @@ import type { ClassifierInput } from "../src/input.ts";
 
 const user = (text: string) => ({ role: "user", content: [{ type: "text", text }] });
 const assistant = (text: string) => ({ role: "assistant", content: [{ type: "text", text }] });
-const toolCallMsg = { role: "assistant", content: [{ type: "toolCall", name: "bash" }] };
+const toolCallMsg = { role: "assistant", stopReason: "toolUse", content: [{ type: "toolCall", name: "bash" }] };
 const toolResult = { role: "toolResult", content: [{ type: "text", text: "ok" }] };
 
 const xhigh = fromProbs({ off: 0, low: 0.1, medium: 0.1, xhigh: 0.8 }, 200);
@@ -127,4 +127,38 @@ test("image-only message → fallback, no calls", async () => {
 	const { d, calls } = deps();
 	const out = await decide(req({ messages: [{ role: "user", content: [{ type: "image", data: "x", mimeType: "image/png" }] }] }), d);
 	assert.deepEqual([out.source, calls.running, calls.classify], ["fallback", 0, 0]);
+});
+
+test("a turn aborted mid tool call is not steering", async () => {
+	const { d, calls } = deps();
+	const partial = { role: "assistant", stopReason: "aborted", content: [{ type: "toolCall", name: "bash" }] };
+	const out = await decide(req({ messages: [user("go"), partial, user("actually, find the race instead")], previousLevel: "off" }), d);
+	assert.deepEqual([out.source, out.level, calls.classify], ["classified", "xhigh", 1]);
+});
+
+test("a turn aborted during tool execution is not steering", async () => {
+	const { d, calls } = deps();
+	const abortedResult = { role: "toolResult", isError: true, content: [{ type: "text", text: "Operation aborted" }] };
+	const out = await decide(req({ messages: [user("go"), toolCallMsg, abortedResult, user("rephrased hard request")], previousLevel: "off" }), d);
+	assert.deepEqual([out.source, calls.classify], ["classified", 1]);
+});
+
+test("an extension message after the prompt doesn't replace the user's text", async () => {
+	const { d, calls } = deps();
+	await decide(req({ messages: [assistant("done"), user("fix the race in queue.ts"), user("[i-have-adhd] keep answers short")] }), d);
+	assert.equal(calls.inputs[0].prompt, "fix the race in queue.ts");
+});
+
+test("a compaction summary before the prompt is skipped", async () => {
+	const { d, calls } = deps();
+	const summary = user("The conversation history before this point was compacted into the following summary:\n<summary>…</summary>");
+	await decide(req({ messages: [summary, user("now add tests")] }), d);
+	assert.equal(calls.inputs[0].prompt, "now add tests");
+});
+
+test("steering detection looks before extension messages too", async () => {
+	const { d, calls } = deps();
+	const ok = { role: "toolResult", content: [{ type: "text", text: "ok" }] };
+	const out = await decide(req({ messages: [user("go"), toolCallMsg, ok, user("also check tests"), user("[ext] note")], previousLevel: "medium" }), d);
+	assert.deepEqual([out.source, calls.classify], ["steering", 0]);
 });

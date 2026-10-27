@@ -44,7 +44,42 @@ export function textOf(content: unknown): string {
 		.trim();
 }
 
-const hasToolCall = (content: unknown) => Array.isArray(content) && content.some((b) => b?.type === "toolCall");
+type Msg = DecideInput["messages"][number];
+
+// pi hands the router extension messages and summaries as role "user" too (convertToLlm).
+const SUMMARY_PREFIXES = [
+	"The conversation history before this point was compacted into the following summary:",
+	"The following is a summary of a branch that this conversation came back from:",
+];
+
+/**
+ * The message the user typed: the first non-summary message in the trailing run of
+ * user-role messages (extensions append their messages after the prompt).
+ */
+function typedMessage(messages: readonly Msg[]): { typed: number; runStart: number } {
+	let runStart = messages.length;
+	while (runStart > 0 && messages[runStart - 1].role === "user") runStart--;
+	for (let i = runStart; i < messages.length; i++) {
+		const text = textOf(messages[i].content);
+		if (!SUMMARY_PREFIXES.some((p) => text.startsWith(p))) return { typed: i, runStart };
+	}
+	return { typed: -1, runStart };
+}
+
+/**
+ * Steering = typed while tools were running: the run follows tool results of an assistant
+ * that stopped for tool use, and none of them is pi's abort marker. Aborted turns are new prompts.
+ */
+function isSteering(messages: readonly Msg[], runStart: number): boolean {
+	if (messages[runStart - 1]?.role !== "toolResult") return false;
+	let i = runStart - 1;
+	while (i >= 0 && messages[i].role === "toolResult") {
+		if (textOf(messages[i].content) === "Operation aborted") return false;
+		i--;
+	}
+	const assistant = messages[i] as Msg & { stopReason?: string };
+	return assistant?.role === "assistant" && assistant.stopReason === "toolUse";
+}
 
 /** Resolves with `onAbort` as soon as the signal fires, even if `p` ignores it. */
 function untilAbort<T>(p: Promise<T>, signal: AbortSignal, onAbort: T): Promise<T> {
@@ -65,10 +100,9 @@ export async function decide(input: DecideInput, deps: DecideDeps): Promise<Deci
 	if (input.reason === "continuation" || input.reason === "retry") return done({ level: fallbackLevel, source: "sticky" });
 	if (input.reason === "direct") return done({ level: fallbackLevel, source: "fallback" });
 
-	const lastUser = input.messages.findLastIndex((m) => m.role === "user");
-	const text = lastUser >= 0 ? textOf(input.messages[lastUser].content) : "";
-	const before = lastUser > 0 ? input.messages[lastUser - 1] : undefined;
-	const steering = before?.role === "toolResult" || (before?.role === "assistant" && hasToolCall(before.content));
+	const { typed, runStart } = typedMessage(input.messages);
+	const text = typed >= 0 ? textOf(input.messages[typed].content) : "";
+	const steering = isSteering(input.messages, runStart);
 
 	if (input.previousLevel && steering) return done({ level: input.previousLevel, source: "steering" });
 	if (input.previousLevel && isGoAhead(text)) return done({ level: input.previousLevel, source: "go-ahead" });
@@ -78,7 +112,7 @@ export async function decide(input: DecideInput, deps: DecideDeps): Promise<Deci
 	if (!(await untilAbort(deps.isRunning(deadline), deadline, false))) {
 		return done({ level: fallbackLevel, source: "fallback", error: deadline.aborted ? "deadline" : "not running" });
 	}
-	const assistant = input.messages.slice(0, Math.max(lastUser, 0)).findLast((m) => m.role === "assistant");
+	const assistant = input.messages.slice(0, Math.max(runStart, 0)).findLast((m) => m.role === "assistant");
 	const timedOut: Classification = { ok: false, error: "timeout", detail: "deadline", latencyMs: 0 };
 	const c = await untilAbort(deps.classify(buildClassifierInput(text, assistant ? textOf(assistant.content) : undefined), deadline), deadline, timedOut);
 	if (!c.ok) return done({ level: fallbackLevel, source: "fallback", error: `${c.error}: ${c.detail}`.slice(0, 200) });
