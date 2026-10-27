@@ -7,14 +7,14 @@ const ok = (level: "off" | "medium" | "xhigh", latencyMs: number) =>
 	fromProbs({ off: level === "off" ? 1 : 0, low: 0, medium: level === "medium" ? 1 : 0, xhigh: level === "xhigh" ? 1 : 0 }, latencyMs);
 const fail = (latencyMs: number): Classification => ({ ok: false, error: "http", detail: "x", latencyMs });
 
-test("budget is 300 ms", () => assert.equal(BUDGET_MS, 300));
+test("budget is 500 ms", () => assert.equal(BUDGET_MS, 500));
 
 test("flash within budget wins", () => {
 	assert.deepEqual(resolveRace(ok("xhigh", 210), ok("off", 20)), { source: "flash", level: "xhigh", addedDelayMs: 210 });
 });
 
 test("late flash falls back to decima at the budget", () => {
-	assert.deepEqual(resolveRace(ok("xhigh", 450), ok("off", 20)), { source: "decima", level: "off", addedDelayMs: 300 });
+	assert.deepEqual(resolveRace(ok("xhigh", 650), ok("off", 20)), { source: "decima", level: "off", addedDelayMs: 500 });
 });
 
 test("early flash failure releases decima immediately", () => {
@@ -22,7 +22,7 @@ test("early flash failure releases decima immediately", () => {
 });
 
 test("both fail → none", () => {
-	assert.deepEqual(resolveRace(fail(15), fail(25)), { source: "none", level: null, addedDelayMs: 300 });
+	assert.deepEqual(resolveRace(fail(15), fail(25)), { source: "none", level: null, addedDelayMs: 500 });
 });
 
 test("raceClassify does not wait for a slow flash", async () => {
@@ -38,8 +38,8 @@ test("raceClassify does not wait for a slow flash", async () => {
 			}),
 	});
 	const start = performance.now();
-	const out = await raceClassify(after(1000, ok("xhigh", 1000), "flash"), after(10, ok("off", 10), "decima"), { prompt: "x" });
-	assert.ok(performance.now() - start < 400);
+	const out = await raceClassify(after(2000, ok("xhigh", 2000), "flash"), after(10, ok("off", 10), "decima"), { prompt: "x" });
+	assert.ok(performance.now() - start < 650);
 	assert.equal(out.source, "decima");
 	assert.equal(out.level, "off");
 });

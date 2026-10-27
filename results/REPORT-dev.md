@@ -1,65 +1,65 @@
 # Classifier benchmark — dev set
 
-Prompt versions: flash `92e63297f148`, decima `c2c6a3880e09`. Budget 300 ms. Items: 15 (7 real, 8 synthetic). Missing: none.
+Prompt versions: flash `92e63297f148`, decima `c2c6a3880e09`. Budget 500 ms. Items: 15 (7 real, 8 synthetic). Missing: none.
 
 Rates are over items both classifiers answered. *Too little* = predicted below the label (risk of wrong answers); *too much* = above it (only slower). Busy rows where the load stream had stopped are excluded.
 
 ## Headline: real messages
 
-| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤300 ms | race used flash |
+| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤500 ms | race used flash |
 |---|---|---|---|---|---|---|---|---|---|---|
-| flash | idle | 7/7 | 71% | 100% | 14% | 14% | 271 | 320 | 71% | – |
-| flash | busy | 7/7 | 71% | 100% | 14% | 14% | 387 | 421 | 0% | – |
+| flash | idle | 7/7 | 71% | 100% | 14% | 14% | 271 | 320 | 100% | – |
+| flash | busy | 7/7 | 71% | 100% | 14% | 14% | 387 | 421 | 100% | – |
 | decima | idle | 7/7 | 14% | 57% | 14% | 71% | 33 | 50 | – | – |
 | decima | busy | 7/7 | 14% | 57% | 14% | 71% | 32 | 54 | – | – |
-| race | idle | 7/7 | 43% | 71% | 14% | 43% | 271 | 300 | – | 71% |
-| race | busy | 7/7 | 14% | 57% | 14% | 71% | 300 | 300 | – | 0% |
+| race | idle | 7/7 | 71% | 100% | 14% | 14% | 271 | 320 | – | 100% |
+| race | busy | 7/7 | 71% | 100% | 14% | 14% | 387 | 421 | – | 100% |
 
 ## Synthetic prompts
 
-| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤300 ms | race used flash |
+| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤500 ms | race used flash |
 |---|---|---|---|---|---|---|---|---|---|---|
 | flash | idle | 8/8 | 63% | 88% | 13% | 25% | 230 | 256 | 100% | – |
-| flash | busy | 8/8 | 63% | 88% | 13% | 25% | 355 | 377 | 0% | – |
+| flash | busy | 8/8 | 63% | 88% | 13% | 25% | 355 | 377 | 100% | – |
 | decima | idle | 8/8 | 25% | 75% | 25% | 50% | 16 | 21 | – | – |
 | decima | busy | 8/8 | 25% | 75% | 25% | 50% | 21 | 25 | – | – |
 | race | idle | 8/8 | 63% | 88% | 13% | 25% | 230 | 256 | – | 100% |
-| race | busy | 8/8 | 25% | 75% | 25% | 50% | 300 | 300 | – | 0% |
+| race | busy | 8/8 | 63% | 88% | 13% | 25% | 355 | 377 | – | 100% |
 
 ## All items
 
-| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤300 ms | race used flash |
+| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤500 ms | race used flash |
 |---|---|---|---|---|---|---|---|---|---|---|
-| flash | idle | 15/15 | 67% | 93% | 13% | 20% | 243 | 320 | 87% | – |
-| flash | busy | 15/15 | 67% | 93% | 13% | 20% | 366 | 421 | 0% | – |
+| flash | idle | 15/15 | 67% | 93% | 13% | 20% | 243 | 320 | 100% | – |
+| flash | busy | 15/15 | 67% | 93% | 13% | 20% | 366 | 421 | 100% | – |
 | decima | idle | 15/15 | 20% | 67% | 20% | 60% | 19 | 50 | – | – |
 | decima | busy | 15/15 | 20% | 67% | 20% | 60% | 24 | 54 | – | – |
-| race | idle | 15/15 | 53% | 80% | 13% | 33% | 243 | 300 | – | 87% |
-| race | busy | 15/15 | 20% | 67% | 20% | 60% | 300 | 300 | – | 0% |
+| race | idle | 15/15 | 67% | 93% | 13% | 20% | 243 | 320 | – | 100% |
+| race | busy | 15/15 | 67% | 93% | 13% | 20% | 366 | 421 | – | 100% |
 
 ## Openers vs follow-ups (all items)
 
 ### Openers
 
-| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤300 ms | race used flash |
+| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤500 ms | race used flash |
 |---|---|---|---|---|---|---|---|---|---|---|
 | flash | idle | 8/8 | 63% | 100% | 0% | 38% | 230 | 271 | 100% | – |
-| flash | busy | 8/8 | 63% | 100% | 0% | 38% | 355 | 373 | 0% | – |
+| flash | busy | 8/8 | 63% | 100% | 0% | 38% | 355 | 373 | 100% | – |
 | decima | idle | 8/8 | 25% | 88% | 25% | 50% | 16 | 41 | – | – |
 | decima | busy | 8/8 | 25% | 88% | 25% | 50% | 21 | 32 | – | – |
 | race | idle | 8/8 | 63% | 100% | 0% | 38% | 230 | 271 | – | 100% |
-| race | busy | 8/8 | 25% | 88% | 25% | 50% | 300 | 300 | – | 0% |
+| race | busy | 8/8 | 63% | 100% | 0% | 38% | 355 | 373 | – | 100% |
 
 ### Follow-ups
 
-| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤300 ms | race used flash |
+| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤500 ms | race used flash |
 |---|---|---|---|---|---|---|---|---|---|---|
-| flash | idle | 7/7 | 71% | 86% | 29% | 0% | 259 | 320 | 71% | – |
-| flash | busy | 7/7 | 71% | 86% | 29% | 0% | 387 | 421 | 0% | – |
+| flash | idle | 7/7 | 71% | 86% | 29% | 0% | 259 | 320 | 100% | – |
+| flash | busy | 7/7 | 71% | 86% | 29% | 0% | 387 | 421 | 100% | – |
 | decima | idle | 7/7 | 14% | 43% | 14% | 71% | 30 | 50 | – | – |
 | decima | busy | 7/7 | 14% | 43% | 14% | 71% | 26 | 54 | – | – |
-| race | idle | 7/7 | 43% | 57% | 29% | 29% | 259 | 300 | – | 71% |
-| race | busy | 7/7 | 14% | 43% | 14% | 71% | 300 | 300 | – | 0% |
+| race | idle | 7/7 | 71% | 86% | 29% | 0% | 259 | 320 | – | 100% |
+| race | busy | 7/7 | 71% | 86% | 29% | 0% | 387 | 421 | – | 100% |
 
 ## Confusion matrices (all items, idle)
 
@@ -86,7 +86,7 @@ Rates are over items both classifiers answered. *Too little* = predicted below t
 | true ↓ / predicted → | off | low | medium | xhigh |
 |---|---|---|---|---|
 | **off** | 2 | 1 | 0 | 0 |
-| **low** | 0 | 2 | 1 | 2 |
+| **low** | 0 | 4 | 1 | 0 |
 | **medium** | 0 | 1 | 2 | 1 |
 | **xhigh** | 0 | 1 | 0 | 2 |
 

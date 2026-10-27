@@ -12,9 +12,9 @@ Why these two (from the 2026-10-26 research review, `~/vault/research/decision-m
 
 ## Speed requirement (Michael's call, 2026-10-26)
 
-The decision must be fast on every message: **it may add at most 300 ms before the model starts replying.** The router classifies once per user-typed message (`reason: "user"`), never on tool-call continuations.
+The decision must be fast on every message: **it may add at most 500 ms before the model starts replying.** *(Raised from 300 ms by Michael after the test run, 2026-10-26: at 300 ms flash never made the cut while busy; at 500 ms it does 98–100% of the time.)* The router classifies once per user-typed message (`reason: "user"`), never on tool-call continuations.
 
-To guarantee that bound, the intended router design runs **both classifiers at the same time** on every message. Flash readout's answer is used if it arrives within 300 ms; otherwise Decima's answer, which is always ready in 10–30 ms, is used. The worst-case added delay therefore equals the budget, never budget + fallback. The benchmark evaluates exactly this policy.
+To guarantee that bound, the intended router design runs **both classifiers at the same time** on every message. Flash readout's answer is used if it arrives within the budget; otherwise Decima's answer, which is always ready in 10–30 ms, is used. The worst-case added delay therefore equals the budget, never budget + fallback. The benchmark evaluates exactly this policy.
 
 ## Goals
 

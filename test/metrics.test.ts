@@ -60,11 +60,11 @@ test("busy rows without load are excluded", () => {
 });
 
 test("race takes decima when flash is over budget", () => {
-	const m = computeMetrics([row("a", pred("xhigh", 0.9, 450), pred("low", 0.9, 20))], map(item("a", "low")), "race");
+	const m = computeMetrics([row("a", pred("xhigh", 0.9, 650), pred("low", 0.9, 20))], map(item("a", "low")), "race");
 	assert.equal(m.exact, 1);
 	assert.equal(m.flashShare, 0);
 	assert.deepEqual(m.calibration, []);
-	assert.equal(m.latency.p50, 300);
+	assert.equal(m.latency.p50, 500);
 });
 
 test("flash parse error counts as an error and drops the item from accuracy everywhere", () => {

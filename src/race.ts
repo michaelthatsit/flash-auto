@@ -2,7 +2,7 @@ import type { Level } from "./levels.ts";
 import type { ClassifierInput } from "./input.ts";
 import type { Classification, Classifier } from "./types.ts";
 
-export const BUDGET_MS = 300;
+export const BUDGET_MS = 500;
 
 export type RaceOutcome = { source: "flash" | "decima" | "none"; level: Level | null; addedDelayMs: number };
 

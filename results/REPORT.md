@@ -4,7 +4,7 @@
 
 ## Recommendation
 
-**Use flash readout as the classifier, and raise the budget from 300 ms to about 450 ms. Keep Decima only as the fallback for when flash is down or swapped out.**
+**Use flash readout as the classifier, with Decima only as the fallback for when flash is down or swapped out. The budget is now 500 ms** (Michael's call after these results; it was 300 ms). At 500 ms the race used flash's answer on every real message, idle and busy.
 
 - **Flash is clearly the better judge.** On your real messages it matched the label 70% of the time and was **never off by more than one level** (100% within one). That is about as good as it can get: the two labellers agreed only 75% of the time. Too little thinking: 16%. It gave the same answers idle and busy.
 - **Decima isn't good enough to decide on its own.** 45% exact, 84% within one. It almost never under-thinks (0% on real messages), but over-thinks 55% of the time, and its confidence doesn't track whether it's right (ECE 0.21, vs flash 0.15).
@@ -19,7 +19,7 @@ Recomputed from the same recorded runs (all 66 items):
 | **450 ms** | **68% / 100%** | **67% / 95%** | **437 ms** |
 | 500 ms | 68% / 100% | 68% / 98% | 437 ms |
 
-At 450 ms you get flash's accuracy in both conditions, for at most ~0.15 s more than you agreed to. Whether that is acceptable is your call: it changes the 300 ms requirement.
+The detailed reports are regenerated at the 500 ms budget. The 300 ms rows above are kept for comparison.
 
 ## Other findings
 
@@ -31,6 +31,5 @@ At 450 ms you get flash's accuracy in both conditions, for at most ~0.15 s more 
 
 ## Before the router phase
 
-1. Decide the budget (450 ms recommended, or keep 300 and accept Decima under load).
-2. Add the `chat-template` compat change so `off` really means zero thinking (currently it maps to `low`). Fix `contextWindow` to 500000 for flash.
-3. The router itself: `raceClassify()` in `src/race.ts` is ready to call from `route()` on `reason === "user"`.
+1. Add the `chat-template` compat change so `off` really means zero thinking (currently it maps to `low`). Fix `contextWindow` to 500000 for flash.
+2. The router itself: `raceClassify()` in `src/race.ts` is ready to call from `route()` on `reason === "user"`.

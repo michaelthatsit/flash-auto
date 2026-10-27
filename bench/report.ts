@@ -19,7 +19,7 @@ const ms = (x: number) => (Number.isNaN(x) ? "–" : `${Math.round(x)}`);
 function headline(rows: Record<Condition, RunRow[]>, items: LabeledItem[]): string {
 	const map = new Map(items.map((i) => [i.id, i]));
 	const lines = [
-		"| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤300 ms | race used flash |",
+		`| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤${BUDGET_MS} ms | race used flash |`,
 		"|---|---|---|---|---|---|---|---|---|---|---|",
 	];
 	for (const arm of ARMS)
