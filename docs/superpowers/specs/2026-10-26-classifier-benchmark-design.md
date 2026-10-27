@@ -74,8 +74,8 @@ Both classifiers are asked this same four-way question directly, with the same o
 - under-thinking vs over-thinking misses, counted separately (under is worse: wrong answers; over is just slower)
 - calibration: accuracy bucketed by top-probability confidence, plus ECE
 - latency p50 / p95 / max, and error/unavailable counts, measured in **two conditions**: flash idle, and flash busy (a separate long generation streaming on flash while the classifier calls run, with the same load for every item). Decima is timed in both conditions too.
-- for flash readout: the share of items answered within the 300 ms budget, idle and busy
-- **the 300 ms race policy** (both run at once; flash's answer if it arrives within 300 ms, else Decima's): accuracy and added delay, idle and busy. This is the headline number.
+- for flash readout: the share of items answered within the budget, idle and busy
+- **the race policy** (both run at once; flash's answer if it arrives within the budget, else Decima's): accuracy and added delay, idle and busy. This is the headline number.
 - for comparison: Decima alone, and flash alone with no budget
 
 **Code**: TypeScript in a new local git repo `~/workspace/flash-auto` (no remote until Michael says). Classifier clients are written so the later pi extension can import them unchanged. The benchmark is a node script reusing them. `ROUTER_PLAN.md` is **copied** here from `~/jeff` and annotated as superseded by this phase's results *(Claude's call)*. `~/jeff` is left untouched, since the original is uncommitted there and deleting it would be irreversible.
