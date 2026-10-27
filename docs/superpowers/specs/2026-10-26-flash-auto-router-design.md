@@ -1,6 +1,6 @@
 # flash-auto router — design
 
-Date: 2026-10-26 · Status: draft for Michael's review · Builds on: `2026-10-26-classifier-benchmark-design.md` and `results/REPORT.md`
+Date: 2026-10-26 · Status: ready for Michael's review (builder-checked) · Builds on: `2026-10-26-classifier-benchmark-design.md` and `results/REPORT.md`
 
 ## Intent
 
@@ -37,6 +37,7 @@ Michael wants pi to pick flash-next's reasoning level automatically on every mes
 | `continuation`, `retry` | Same as the turn's previous dispatch (`request.failed ?? request.previous`) — keeps caches valid |
 | `direct` (compaction summaries etc.) | Previous level, else medium |
 | `user`, message is a short go-ahead reply | **Previous level** (no classify call) |
+| `user`, steering message typed while the turn is still running | **Previous level** (no classify call) — *Claude's call: re-judging mid-turn would change the level partway through the work.* Detect it from `request.messages`: the message before the new user message is a tool result or an assistant message with tool calls. |
 | `user`, flash not running | Previous level, else medium (no classify call) |
 | `user`, otherwise | Classify with flash; on success use its level; on error/timeout/over 500 ms, previous level, else medium |
 
@@ -44,7 +45,7 @@ Michael wants pi to pick flash-next's reasoning level automatically on every mes
 
 **Go-ahead replies**: a user message of at most ~40 characters that, after trimming, lowercasing and stripping trailing punctuation, matches a fixed list. The list must include at least: `do it`, `yes`, `yep`, `go ahead`, `go for it`, `ok`, `ok do it`, `sounds good`, `proceed`, `continue`, `ship it`, `lgtm`, `yes please`, `please do`. Applies only when there is a previous level to keep.
 
-**Classifier**: reuse `src/flash.ts` (`createFlashClassifier`, `isFlashRunning`) and `src/input.ts` (`buildClassifierInput(lastUserText, previousAssistantText)`), unchanged in behaviour. Wording and level descriptions stay frozen at the benchmarked versions (flash prompt version recorded in README). The 500 ms budget is enforced with an abort signal (the request's own `signal` combined with the budget).
+**Classifier**: reuse `src/flash.ts` (`createFlashClassifier`, `isFlashRunning`) and `src/input.ts` (`buildClassifierInput(lastUserText, previousAssistantText)`), unchanged in behaviour. Wording and level descriptions stay frozen at the benchmarked versions (flash prompt version recorded in README). The 500 ms budget is **one shared deadline covering both the `/running` check and the classify call** *(Claude's call: otherwise a slow llama-swap could add up to ~2.5 s)*, enforced with an abort signal (the request's own `signal` combined with the deadline). A `/running` check that times out counts as "not running".
 
 **Level mapping**: classifier levels map one-to-one to pi thinking levels (off, low, medium, xhigh) on the physical model.
 
@@ -52,7 +53,8 @@ Michael wants pi to pick flash-next's reasoning level automatically on every mes
 - `compat.thinkingFormat: "chat-template"` with `chatTemplateKwargs: { "enable_thinking": {"$var": "thinking.enabled"}, "reasoning_effort": {"$var": "effort", "omitWhenOff": true} }` (keeping `supportsDeveloperRole: false`).
 - `thinkingLevelMap` keeps low→low, medium→medium, high/xhigh/max→xhigh, minimal→low; "off" no longer maps to low.
 - `contextWindow: 500000` (vLLM serves `--max-model-len 500000`).
-- Verify live: off gives 0 reasoning tokens; low/medium/xhigh are accepted (no 400s).
+- Verify live: off gives 0 reasoning tokens; low/medium/xhigh are accepted (no 400s) **and differ** — reasoning tokens rise from low to xhigh on one prompt.
+- Pre-checked 2026-10-26 by sending `chat_template_kwargs` straight to vLLM, on one arithmetic prompt: off 0, low 215, medium 291, xhigh 321 reasoning tokens. So the template reads `reasoning_effort` from the kwargs, and the change should work. If pi's request turns out different, stop and report rather than sending both the kwarg and the top-level field.
 
 This also changes manual "off" on plain `qwen3.8-flash-next` to true zero, which is the intended meaning.
 
