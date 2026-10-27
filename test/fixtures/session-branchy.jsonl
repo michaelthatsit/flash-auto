@@ -1,0 +1,10 @@
+{"type": "session", "id": "s1"}
+{"type": "message", "id": "sys", "parentId": null, "message": {"role": "system", "content": ""}}
+{"type": "message", "id": "u1", "parentId": "sys", "message": {"role": "user", "content": [{"type": "text", "text": "Fix the flaky test in queue.ts"}]}}
+{"type": "message", "id": "a1", "parentId": "u1", "message": {"role": "assistant", "content": [{"type": "thinking", "thinking": "hmm"}, {"type": "toolCall", "name": "read"}]}}
+{"type": "message", "id": "t1", "parentId": "a1", "message": {"role": "toolResult", "toolName": "read", "content": [{"type": "text", "text": "file"}]}}
+{"type": "message", "id": "a2", "parentId": "t1", "message": {"role": "assistant", "content": [{"type": "thinking", "thinking": "ok"}, {"type": "text", "text": "Plan: do X"}]}}
+{"type": "message", "id": "u2", "parentId": "a2", "message": {"role": "user", "content": "yes, go ahead"}}
+{"type": "message", "id": "u3", "parentId": "a2", "message": {"role": "user", "content": [{"type": "text", "text": "no, do Y instead"}]}}
+{"type": "message", "id": "u4", "parentId": "a2", "message": {"role": "user", "content": [{"type": "image", "data": "xx", "mimeType": "image/png"}]}}
+{not json
