@@ -5,10 +5,10 @@ export const LETTERS: Record<Level, "A" | "B" | "C" | "D"> = { off: "A", low: "B
 
 /** Fixed by the design spec; both classifiers get exactly these. */
 export const LEVEL_DESCRIPTIONS: Record<Level, string> = {
-	off: "greeting, thanks, trivial lookup or command explanation",
-	low: "simple single-step change or question",
-	medium: "ordinary feature or fix that needs some investigation",
-	xhigh: "hard debugging, design, cross-cutting multi-file work",
+	off: "greeting, thanks, acknowledgement, or a quick fact or lookup",
+	low: "a simple question or single-step task",
+	medium: "a question or task that needs some looking into, a few steps, or comparing options",
+	xhigh: "a hard problem: tricky debugging, planning or design with many moving parts, or careful multi-step reasoning or math",
 };
 
 export function levelDistance(a: Level, b: Level): number {

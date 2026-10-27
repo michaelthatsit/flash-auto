@@ -12,7 +12,7 @@ export interface DecimaOptions {
 
 const DEFAULTS = { baseUrl: "http://127.0.0.1:8017", timeoutMs: 2000 };
 
-export const DECIMA_INSTRUCTIONS = "How much reasoning does a coding agent need to handle `prompt` well?";
+export const DECIMA_INSTRUCTIONS = "How much reasoning does an assistant need to handle `prompt` well?";
 
 export function buildDecimaRequest(input: ClassifierInput): object {
 	return {

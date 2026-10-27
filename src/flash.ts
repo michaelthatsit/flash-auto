@@ -14,7 +14,7 @@ export interface FlashOptions {
 const DEFAULTS = { baseUrl: "http://localhost:9000", model: "qwen3.8-flash-next", timeoutMs: 5000 };
 
 const INSTRUCTIONS = [
-	"Classify how much reasoning a coding agent needs to handle the user's latest message well.",
+	"Classify how much reasoning an assistant needs to handle the user's latest message well.",
 	...LEVELS.map((l) => `${LETTERS[l]} = ${l}: ${LEVEL_DESCRIPTIONS[l]}`),
 ].join("\n");
 

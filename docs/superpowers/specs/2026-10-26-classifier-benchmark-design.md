@@ -43,10 +43,12 @@ To guarantee that bound, the intended router design runs **both classifiers at t
 
 | Label | Meaning | pi level |
 |---|---|---|
-| A / off | greeting, thanks, trivial lookup or command explanation | off |
-| B / low | simple single-step change or question | low |
-| C / medium | ordinary feature or fix that needs some investigation | medium |
-| D / xhigh | hard debugging, design, cross-cutting multi-file work | xhigh |
+| A / off | greeting, thanks, acknowledgement, or a quick fact or lookup | off |
+| B / low | a simple question or single-step task | low |
+| C / medium | a question or task that needs some looking into, a few steps, or comparing options | medium |
+| D / xhigh | a hard problem: tricky debugging, planning or design with many moving parts, or careful multi-step reasoning or math | xhigh |
+
+*(Michael's call, 2026-10-26: the wording is domain-neutral because pi is used for everyday questions too, not only coding. The question says "an assistant", not "a coding agent".)*
 
 Both classifiers are asked this same four-way question directly, with the same option descriptions. This replaces ROUTER_PLAN.md's task-type question ("bugfix/feature/...") and its decision table, because on realistic wording the task type was unreliable.
 
@@ -61,6 +63,8 @@ Both classifiers are asked this same four-way question directly, with the same o
 **Turns sampled** *(Claude's call)*: both opening messages and follow-ups, since follow-ups are most of what a router sees. For a follow-up, the sampler pulls the preceding assistant message from the session file, and the label sheet shows it to Michael next to the prompt. The report splits results into turns with and without previous context.
 
 **Labels**: Claude pulls candidate prompts from `~/.pi/agent/sessions/**/*.jsonl` (102 user messages exist; median 106 chars) and proposes a level and a one-line reason for each. Michael reviews and corrects them. Michael's corrected labels are the ground truth. Sampling should cover all four levels. If real prompts leave a level badly under-represented (fewer than ~6), Claude adds clearly marked hand-written prompts to fill it, and the report gives results with and without them.
+
+**Synthetic prompts** *(Michael's call, 2026-10-26)*: in addition to the real set, ~30 hand-written prompts spread across coding and everyday life: cooking, Michael's own data (todos, calendar), travel, money and math, health, writing, buying, home, learning, and personal advice. Every level appears, and the set deliberately includes traps: short-but-hard, long-but-easy (a pasted log or recipe with a trivial question), and the same short reply ("do it") after plans of very different size. They are marked `handwritten`, reviewed by Michael with the rest, split the same way, and reported as their own section. The headline numbers use the real set.
 
 **Dev/test split**: ~15 items are a dev set for fixing prompt wording and bugs. ~35 are a frozen test set. The question wording is frozen before the test set is scored, and the report states this.
 
