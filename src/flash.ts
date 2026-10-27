@@ -37,10 +37,13 @@ export function parseLetterProbs(topLogprobs: { token: string; logprob: number }
 	return LEVELS.some((l) => probs[l] > 0) ? probs : null;
 }
 
-export async function isFlashRunning(opts: FlashOptions = {}): Promise<boolean> {
+/** True only if flash is loaded and ready; a timeout or abort counts as not running. */
+export async function isFlashRunning(opts: FlashOptions = {}, signal?: AbortSignal): Promise<boolean> {
 	const { baseUrl, model } = { ...DEFAULTS, ...opts };
 	try {
-		const res = await (opts.fetch ?? fetch)(`${baseUrl}/running`, { signal: AbortSignal.timeout(2000) });
+		const res = await (opts.fetch ?? fetch)(`${baseUrl}/running`, {
+			signal: AbortSignal.any([AbortSignal.timeout(2000), ...(signal ? [signal] : [])]),
+		});
 		const { running } = (await res.json()) as { running?: { model: string; state: string }[] };
 		return !!running?.some((r) => r.model === model && r.state === "ready");
 	} catch {

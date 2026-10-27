@@ -88,3 +88,11 @@ test("error body that fails to stream → http error, never a throw", async () =
 	assert.equal(c.ok, false);
 	assert.equal(!c.ok && c.error, "http");
 });
+
+test("isFlashRunning with an aborted signal → false", async () => {
+	const fn = (async (_u: string, init?: RequestInit) => {
+		init?.signal?.throwIfAborted();
+		return Response.json({ running: [{ model: "qwen3.8-flash-next", state: "ready" }] });
+	}) as typeof fetch;
+	assert.equal(await isFlashRunning({ fetch: fn }, AbortSignal.abort()), false);
+});
