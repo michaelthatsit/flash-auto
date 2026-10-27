@@ -130,3 +130,14 @@ test("gapMs pauses between items, not before the first", async () => {
 	});
 	assert.deepEqual(slept, [45_000, 45_000]);
 });
+
+test("runExtra writes deem rows and resumes", async () => {
+	const { runExtra } = await import("../bench/run.ts");
+	const f = outFile();
+	const deem: Classifier = { name: "deem", classify: async () => fromProbs({ off: 0, low: 1, medium: 0, xhigh: 0 }, 700) };
+	const first = await runExtra({ items: [item("a")], condition: "idle", outFile: f, classifier: deem });
+	const second = await runExtra({ items: [item("a"), item("b")], condition: "idle", outFile: f, classifier: deem });
+	assert.deepEqual([first.written, second.written, second.skipped], [1, 1, 1]);
+	const lines = readFileSync(f, "utf8").trim().split("\n").map((l) => JSON.parse(l));
+	assert.deepEqual(lines.map((l) => [l.itemId, l.deem.level]), [["a", "low"], ["b", "low"]]);
+});

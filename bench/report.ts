@@ -6,17 +6,20 @@ import { BUDGET_MS } from "../src/race.ts";
 import { FLASH_PROMPT_VERSION } from "../src/flash.ts";
 import { DECIMA_PROMPT_VERSION } from "../src/decima.ts";
 import { computeMetrics, filterItems, type Arm, type Metrics } from "./metrics.ts";
-import { readRows, type RunRow } from "./run.ts";
+import { joinExtra, readRows, type RunRow } from "./run.ts";
 import type { LabeledItem } from "./labels.ts";
 
 type Condition = "idle" | "busy";
-const ARMS: Arm[] = ["flash", "decima", "race"];
+const BASE_ARMS: Arm[] = ["flash", "decima", "race"];
+const DEEM_ARMS: Arm[] = ["deem", "race-deem"];
 const CONDITIONS: Condition[] = ["idle", "busy"];
 
 const pct = (x: number | undefined) => (x === undefined || Number.isNaN(x) ? "–" : `${Math.round(x * 100)}%`);
 const ms = (x: number) => (Number.isNaN(x) ? "–" : `${Math.round(x)}`);
 
 function headline(rows: Record<Condition, RunRow[]>, items: LabeledItem[]): string {
+	const hasDeem = [...rows.idle, ...rows.busy].some((r) => r.deem);
+	const ARMS = hasDeem ? [...BASE_ARMS, ...DEEM_ARMS] : BASE_ARMS;
 	const map = new Map(items.map((i) => [i.id, i]));
 	const lines = [
 		`| arm | condition | answered | exact | within one | too little | too much | p50 ms | p95 ms | flash ≤${BUDGET_MS} ms | race used flash |`,
@@ -95,7 +98,7 @@ export function renderReport(input: { set: "dev" | "test"; items: LabeledItem[];
 		"",
 		"## Confusion matrices (all items, idle)",
 		"",
-		...ARMS.flatMap((arm) => [`### ${arm}`, "", confusion(idleAll(arm)), ""]),
+		...[...BASE_ARMS, ...([...input.rows.idle].some((r) => r.deem) ? DEEM_ARMS : [])].flatMap((arm) => [`### ${arm}`, "", confusion(idleAll(arm)), ""]),
 		"## Calibration (all items, idle)",
 		"",
 		...(["flash", "decima"] as const).flatMap((arm) => [`### ${arm}`, "", calibration(idleAll(arm)), ""]),
@@ -117,7 +120,10 @@ if (import.meta.main) {
 		process.exit(2);
 	}
 	const items = readFileSync("data/testset.jsonl", "utf8").trim().split("\n").map((l) => JSON.parse(l) as LabeledItem);
-	const rows = { idle: readRows(`results/${set}-idle.jsonl`), busy: readRows(`results/${set}-busy.jsonl`) };
+	const rows = {
+		idle: joinExtra(readRows(`results/${set}-idle.jsonl`), `results/${set}-idle-deem.jsonl`),
+		busy: joinExtra(readRows(`results/${set}-busy.jsonl`), `results/${set}-busy-deem.jsonl`),
+	};
 	try {
 		writeFileSync(`results/REPORT-${set}.md`, renderReport({ set, items, rows }));
 		console.log(`wrote results/REPORT-${set}.md`);

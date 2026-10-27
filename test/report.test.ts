@@ -29,3 +29,11 @@ test("report refuses rows from different wording", () => {
 		/prompt version/,
 	);
 });
+
+test("deem arms appear only when deem results are joined", () => {
+	const plain = renderReport({ set: "test", items, rows: { idle: [row("a", "idle")], busy: [] } });
+	assert.doesNotMatch(plain, /\| deem \|/);
+	const withDeem = renderReport({ set: "test", items, rows: { idle: [{ ...row("a", "idle"), deem: c }], busy: [] } });
+	assert.match(withDeem, /\| deem \| idle \|/);
+	assert.match(withDeem, /\| race-deem \| idle \|/);
+});

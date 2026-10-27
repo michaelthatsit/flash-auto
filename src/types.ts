@@ -8,7 +8,7 @@ export type Classification =
 	| { ok: false; error: "timeout" | "unavailable" | "http" | "parse"; detail: string; latencyMs: number };
 
 export interface Classifier {
-	name: "flash" | "decima";
+	name: "flash" | "decima" | "deem";
 	classify(input: ClassifierInput, signal?: AbortSignal): Promise<Classification>;
 }
 

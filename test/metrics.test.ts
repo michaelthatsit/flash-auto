@@ -84,3 +84,21 @@ test("filterItems by kind and handwritten", () => {
 	assert.deepEqual(filterItems(items, { kind: "follow-up" }).map((i) => i.id), ["b"]);
 	assert.deepEqual(filterItems(items, { includeHandwritten: false }).map((i) => i.id), ["a", "b"]);
 });
+
+test("deem arm scores the deem column", () => {
+	const m = computeMetrics([row("a", pred("off", 0.9), pred("off", 0.9), { deem: pred("medium", 0.8, 900) })], map(item("a", "medium")), "deem");
+	assert.equal(m.answered, 1);
+	assert.equal(m.exact, 1);
+	assert.equal(m.latency.p50, 900);
+});
+
+test("race-deem falls back to deem when flash is late", () => {
+	const m = computeMetrics([row("a", pred("xhigh", 0.9, 650), pred("off", 0.9), { deem: pred("low", 0.8, 300) })], map(item("a", "low")), "race-deem");
+	assert.equal(m.exact, 1);
+	assert.equal(m.flashShare, 0);
+});
+
+test("deem arms skip rows without a deem result", () => {
+	const m = computeMetrics([row("a", pred("low", 0.9), pred("low", 0.9))], map(item("a", "low")), "deem");
+	assert.equal(m.answered, 0);
+});

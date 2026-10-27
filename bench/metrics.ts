@@ -3,7 +3,7 @@ import { BUDGET_MS, resolveRace } from "../src/race.ts";
 import type { LabeledItem } from "./labels.ts";
 import type { RunRow } from "./run.ts";
 
-export type Arm = "flash" | "decima" | "race";
+export type Arm = "flash" | "decima" | "deem" | "race" | "race-deem";
 
 export interface Metrics {
 	n: number;
@@ -34,20 +34,23 @@ export function computeMetrics(rows: RunRow[], items: Map<string, LabeledItem>, 
 	const valid = rows.filter((r) => items.has(r.itemId) && !(r.condition === "busy" && !r.loadActive));
 	const errors: Record<string, number> = {};
 	const count = (c: RunRow["flash"]) => !c.ok && (errors[c.error] = (errors[c.error] ?? 0) + 1);
+	const deemArm = arm === "deem" || arm === "race-deem";
 	for (const r of valid) {
-		if (arm !== "decima") count(r.flash);
-		if (arm !== "flash") count(r.decima);
+		if (arm === "flash" || arm.startsWith("race")) count(r.flash);
+		if (arm === "decima" || arm === "race") count(r.decima);
+		if (deemArm && r.deem) count(r.deem);
 	}
 	const confusion = Object.fromEntries(LEVELS.map((t) => [t, Object.fromEntries(LEVELS.map((p) => [p, 0]))])) as Metrics["confusion"];
 	const answers: { truth: Level; level: Level; conf: number; latency: number; fromFlash: boolean }[] = [];
 	for (const r of valid) {
 		if (!r.flash.ok || !r.decima.ok) continue;
+		if (deemArm && !r.deem?.ok) continue;
 		const truth = items.get(r.itemId)!.level;
-		if (arm === "race") {
-			const out = resolveRace(r.flash, r.decima);
+		if (arm === "race" || arm === "race-deem") {
+			const out = resolveRace(r.flash, arm === "race" ? r.decima : r.deem!);
 			answers.push({ truth, level: out.level!, conf: NaN, latency: out.addedDelayMs, fromFlash: out.source === "flash" });
 		} else {
-			const c = r[arm];
+			const c = r[arm]!;
 			if (!c.ok) continue;
 			answers.push({ truth, level: c.level, conf: c.confidence, latency: c.latencyMs, fromFlash: arm === "flash" });
 		}
@@ -56,14 +59,14 @@ export function computeMetrics(rows: RunRow[], items: Map<string, LabeledItem>, 
 	const rate = (f: (a: (typeof answers)[number]) => boolean) => (k ? answers.filter(f).length / k : NaN);
 	for (const a of answers) confusion[a.truth][a.level]++;
 	const calibration =
-		arm === "race"
+		arm.startsWith("race")
 			? []
 			: BUCKETS.map(([lo, hi]) => {
 					const b = answers.filter((a) => a.conf >= lo && a.conf < hi);
 					const mean = (xs: number[]) => (xs.length ? xs.reduce((s, x) => s + x, 0) / xs.length : NaN);
 					return { lo, hi: Math.min(hi, 1), n: b.length, accuracy: mean(b.map((a) => +(a.level === a.truth))), meanConf: mean(b.map((a) => a.conf)) };
 				});
-	const ece = arm === "race" ? NaN : calibration.reduce((s, b) => (b.n ? s + (b.n / k) * Math.abs(b.accuracy - b.meanConf) : s), 0);
+	const ece = arm.startsWith("race") ? NaN : calibration.reduce((s, b) => (b.n ? s + (b.n / k) * Math.abs(b.accuracy - b.meanConf) : s), 0);
 	const lat = answers.map((a) => a.latency).sort((a, b) => a - b);
 	const m: Metrics = {
 		n: valid.length,
@@ -80,7 +83,7 @@ export function computeMetrics(rows: RunRow[], items: Map<string, LabeledItem>, 
 		errors,
 	};
 	if (arm === "flash") m.withinBudget = rate((a) => a.latency <= BUDGET_MS);
-	if (arm === "race") m.flashShare = rate((a) => a.fromFlash);
+	if (arm.startsWith("race")) m.flashShare = rate((a) => a.fromFlash);
 	return m;
 }
 

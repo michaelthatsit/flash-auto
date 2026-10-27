@@ -8,15 +8,18 @@ export interface DecimaOptions {
 	baseUrl?: string;
 	timeoutMs?: number;
 	fetch?: typeof fetch;
+	/** Any server speaking the System One wire format (e.g. Deem-4B via jevalt). */
+	model?: string;
+	name?: "decima" | "deem";
 }
 
-const DEFAULTS = { baseUrl: "http://127.0.0.1:8017", timeoutMs: 2000 };
+const DEFAULTS = { baseUrl: "http://127.0.0.1:8017", timeoutMs: 2000, model: "decima-small", name: "decima" as const };
 
 export const DECIMA_INSTRUCTIONS = "How much reasoning does an assistant need to handle `prompt` well?";
 
-export function buildDecimaRequest(input: ClassifierInput): object {
+export function buildDecimaRequest(input: ClassifierInput, model = DEFAULTS.model): object {
 	return {
-		model: "decima-small",
+		model,
 		state: input.previous ? { previous_assistant: input.previous, prompt: input.prompt } : { prompt: input.prompt },
 		questions: { level: { type: "choice", instructions: DECIMA_INSTRUCTIONS, criteria: LEVEL_DESCRIPTIONS } },
 	};
@@ -29,11 +32,11 @@ export function parseDecimaResponse(json: unknown): Probs | null {
 }
 
 export function createDecimaClassifier(opts: DecimaOptions = {}): Classifier {
-	const { baseUrl, timeoutMs } = { ...DEFAULTS, ...opts };
+	const { baseUrl, timeoutMs, model, name } = { ...DEFAULTS, ...opts };
 	return {
-		name: "decima",
+		name,
 		async classify(input, signal) {
-			const res = await postJson(opts.fetch ?? fetch, `${baseUrl}/v1/systemone`, buildDecimaRequest(input), timeoutMs, signal);
+			const res = await postJson(opts.fetch ?? fetch, `${baseUrl}/v1/systemone`, buildDecimaRequest(input, model), timeoutMs, signal);
 			if (!res.ok) return res;
 			const probs = parseDecimaResponse(res.json);
 			if (!probs) return { ok: false, error: "parse", detail: JSON.stringify(res.json).slice(0, 200), latencyMs: res.latencyMs };
