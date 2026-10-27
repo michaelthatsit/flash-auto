@@ -80,3 +80,11 @@ test("isFlashRunning", async () => {
 	assert.equal(await run([]), false);
 	assert.equal(await run([{ model: "qwen3.8-27b", state: "ready" }]), false);
 });
+
+test("error body that fails to stream → http error, never a throw", async () => {
+	const body = new ReadableStream({ pull(c) { c.error(new DOMException("aborted", "AbortError")); } });
+	const fn = (async () => new Response(body, { status: 503 })) as typeof fetch;
+	const c = await createFlashClassifier({ fetch: fn }).classify({ prompt: "hi" });
+	assert.equal(c.ok, false);
+	assert.equal(!c.ok && c.error, "http");
+});

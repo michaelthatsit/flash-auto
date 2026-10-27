@@ -27,7 +27,8 @@ export async function postJson(
 		return { ok: false, error, detail: String(err), latencyMs: latency() };
 	}
 	if (!res.ok) {
-		return { ok: false, error: "http", detail: `${res.status} ${(await res.text()).slice(0, 200)}`, latencyMs: latency() };
+		const text = await res.text().catch(() => "");
+		return { ok: false, error: "http", detail: `${res.status} ${text.slice(0, 200)}`, latencyMs: latency() };
 	}
 	try {
 		const json = await res.json();
