@@ -77,3 +77,21 @@ test("registers one virtual model per AUTO_MODELS entry", () => {
 	assert.deepEqual([defs[0].provider, defs[0].id, defs[0].thinkingLevels], ["spark", "flash-auto", ["medium"]]);
 	assert.equal(typeof defs[0].route, "function");
 });
+
+test("announces the decision as a status before the reply", async () => {
+	const statuses: [string, string | undefined][] = [];
+	const ui = { setStatus: (k: string, t: string | undefined) => void statuses.push([k, t]) };
+	const { route } = setup("xhigh");
+	await route(request({}), { ...ctx, ui });
+	await route(request({ reason: "continuation", state: { level: "xhigh", source: "classified" } }), { ...ctx, ui });
+	const fb = createRoute(AUTO_MODELS[0], { decideDeps: { isRunning: async () => false, classify: async () => fromProbs({ off: 1, low: 0, medium: 0, xhigh: 0 }, 1) }, log: () => {} });
+	await fb(request({}), { ...ctx, ui });
+	assert.deepEqual(statuses, [["flash-auto", "auto → xhigh"], ["flash-auto", "auto → medium (fallback)"]]);
+});
+
+test("a status failure doesn't break routing", async () => {
+	const { route } = setup("low");
+	const ui = { setStatus: () => { throw new Error("no ui"); } };
+	const r = await route(request({}), { ...ctx, ui });
+	assert.equal(r.thinkingLevel, "low");
+});

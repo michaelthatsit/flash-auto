@@ -25,6 +25,7 @@ No wording was changed after the dev run: Decima instruction variants moved dev 
 
 - **Same level for the whole turn:** tool-call steps and retries reuse it. Short go-ahead replies ("do it", "yes", "continue"…) and messages typed mid-turn keep the previous level.
 - **Never triggers a model swap:** if flash isn't loaded, or the decision fails or takes over 500 ms, it uses the previous level, else medium.
+- **Live status:** the router announces each decision as an extension status (`auto → xhigh`, `auto → medium (fallback)`) before the reply starts. It shows in pi's footer and in pi-web's status row.
 - **Decision log:** `~/.pi/agent/flash-auto.jsonl`, one line per message: level, source, confidence, probabilities, latency. No prompt text.
 - **Installed** as a local pi package: `"../../workspace/flash-auto"` in `~/.pi/agent/settings.json` → `packages`. To disable it, remove that line (backup: `settings.json.bak-2026-10-26`).
 - **Needs** the flash entry in `~/.pi/agent/models.json` from `docs/models-json-change.md` (true-zero off). To add another model, add an entry to `src/models.ts` and benchmark it first (`bench/`).

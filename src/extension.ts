@@ -15,6 +15,7 @@ export const DECISION_LOG = join(homedir(), ".pi", "agent", "flash-auto.jsonl");
 export interface RouteCtx {
 	modelRegistry: { find(provider: string, id: string): Model<Api> | undefined };
 	sessionManager?: { getSessionFile(): string | undefined };
+	ui?: { setStatus(key: string, text: string | undefined): void };
 }
 
 const PI_TO_LEVEL: Partial<Record<ModelThinkingLevel, Level>> = { minimal: "low", high: "xhigh", max: "xhigh" };
@@ -30,6 +31,12 @@ export function createRoute(auto: AutoModel, deps: { decideDeps: DecideDeps; log
 			deps.decideDeps,
 		);
 		if (request.reason === "user") {
+			// Announce the level now, before the reply streams; pi only stamps it on the message at the end.
+			try {
+				ctx.ui?.setStatus(auto.virtualId, `auto → ${d.level}${d.source === "classified" ? "" : ` (${d.source})`}`);
+			} catch {
+				// no UI (print/json mode) — routing is unaffected
+			}
 			deps.log({
 				ts: new Date().toISOString(),
 				session: ctx.sessionManager?.getSessionFile(),
