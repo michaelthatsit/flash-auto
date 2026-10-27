@@ -14,6 +14,10 @@ Rates are over items both classifiers answered. *Too little* = predicted below t
 | decima | busy | 7/7 | 14% | 57% | 14% | 71% | 32 | 54 | – | – |
 | race | idle | 7/7 | 71% | 100% | 14% | 14% | 271 | 320 | – | 100% |
 | race | busy | 7/7 | 71% | 100% | 14% | 14% | 387 | 421 | – | 100% |
+| deem | idle | 7/7 | 86% | 100% | 14% | 0% | 88 | 112 | – | – |
+| deem | busy | 0/7 | – | – | – | – | – | – | – | – |
+| race-deem | idle | 7/7 | 71% | 100% | 14% | 14% | 271 | 320 | – | 100% |
+| race-deem | busy | 0/7 | – | – | – | – | – | – | – | – |
 
 ## Synthetic prompts
 
@@ -25,6 +29,10 @@ Rates are over items both classifiers answered. *Too little* = predicted below t
 | decima | busy | 8/8 | 25% | 75% | 25% | 50% | 21 | 25 | – | – |
 | race | idle | 8/8 | 63% | 88% | 13% | 25% | 230 | 256 | – | 100% |
 | race | busy | 8/8 | 63% | 88% | 13% | 25% | 355 | 377 | – | 100% |
+| deem | idle | 8/8 | 75% | 100% | 0% | 25% | 74 | 84 | – | – |
+| deem | busy | 0/8 | – | – | – | – | – | – | – | – |
+| race-deem | idle | 8/8 | 63% | 88% | 13% | 25% | 230 | 256 | – | 100% |
+| race-deem | busy | 0/8 | – | – | – | – | – | – | – | – |
 
 ## All items
 
@@ -36,6 +44,10 @@ Rates are over items both classifiers answered. *Too little* = predicted below t
 | decima | busy | 15/15 | 20% | 67% | 20% | 60% | 24 | 54 | – | – |
 | race | idle | 15/15 | 67% | 93% | 13% | 20% | 243 | 320 | – | 100% |
 | race | busy | 15/15 | 67% | 93% | 13% | 20% | 366 | 421 | – | 100% |
+| deem | idle | 15/15 | 80% | 100% | 7% | 13% | 82 | 112 | – | – |
+| deem | busy | 0/15 | – | – | – | – | – | – | – | – |
+| race-deem | idle | 15/15 | 67% | 93% | 13% | 20% | 243 | 320 | – | 100% |
+| race-deem | busy | 0/15 | – | – | – | – | – | – | – | – |
 
 ## Openers vs follow-ups (all items)
 
@@ -49,6 +61,10 @@ Rates are over items both classifiers answered. *Too little* = predicted below t
 | decima | busy | 8/8 | 25% | 88% | 25% | 50% | 21 | 32 | – | – |
 | race | idle | 8/8 | 63% | 100% | 0% | 38% | 230 | 271 | – | 100% |
 | race | busy | 8/8 | 63% | 100% | 0% | 38% | 355 | 373 | – | 100% |
+| deem | idle | 8/8 | 63% | 100% | 13% | 25% | 74 | 88 | – | – |
+| deem | busy | 0/8 | – | – | – | – | – | – | – | – |
+| race-deem | idle | 8/8 | 63% | 100% | 0% | 38% | 230 | 271 | – | 100% |
+| race-deem | busy | 0/8 | – | – | – | – | – | – | – | – |
 
 ### Follow-ups
 
@@ -60,6 +76,10 @@ Rates are over items both classifiers answered. *Too little* = predicted below t
 | decima | busy | 7/7 | 14% | 43% | 14% | 71% | 26 | 54 | – | – |
 | race | idle | 7/7 | 71% | 86% | 29% | 0% | 259 | 320 | – | 100% |
 | race | busy | 7/7 | 71% | 86% | 29% | 0% | 387 | 421 | – | 100% |
+| deem | idle | 7/7 | 100% | 100% | 0% | 0% | 86 | 112 | – | – |
+| deem | busy | 0/7 | – | – | – | – | – | – | – | – |
+| race-deem | idle | 7/7 | 71% | 86% | 29% | 0% | 259 | 320 | – | 100% |
+| race-deem | busy | 0/7 | – | – | – | – | – | – | – | – |
 
 ## Confusion matrices (all items, idle)
 
@@ -82,6 +102,24 @@ Rates are over items both classifiers answered. *Too little* = predicted below t
 | **xhigh** | 0 | 1 | 2 | 0 |
 
 ### race
+
+| true ↓ / predicted → | off | low | medium | xhigh |
+|---|---|---|---|---|
+| **off** | 2 | 1 | 0 | 0 |
+| **low** | 0 | 4 | 1 | 0 |
+| **medium** | 0 | 1 | 2 | 1 |
+| **xhigh** | 0 | 1 | 0 | 2 |
+
+### deem
+
+| true ↓ / predicted → | off | low | medium | xhigh |
+|---|---|---|---|---|
+| **off** | 2 | 1 | 0 | 0 |
+| **low** | 0 | 4 | 1 | 0 |
+| **medium** | 0 | 0 | 4 | 0 |
+| **xhigh** | 0 | 0 | 1 | 2 |
+
+### race-deem
 
 | true ↓ / predicted → | off | low | medium | xhigh |
 |---|---|---|---|---|

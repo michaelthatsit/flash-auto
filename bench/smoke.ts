@@ -2,6 +2,7 @@
 import { buildClassifierInput } from "../src/input.ts";
 import { createFlashClassifier, isFlashRunning } from "../src/flash.ts";
 import { createDecimaClassifier } from "../src/decima.ts";
+import { createDeemClassifier } from "../src/deem.ts";
 
 const [which, prompt] = process.argv.slice(2);
 if (!prompt) {
@@ -15,6 +16,8 @@ if (which === "flash") {
 		process.exit(1);
 	}
 	console.log(JSON.stringify(await createFlashClassifier().classify(input)));
+} else if (which === "deem") {
+	console.log(JSON.stringify(await createDeemClassifier().classify(input)));
 } else if (which === "decima") {
 	console.log(JSON.stringify(await createDecimaClassifier().classify(input)));
 } else {

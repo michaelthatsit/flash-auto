@@ -21,6 +21,26 @@ Recomputed from the same recorded runs (all 66 items):
 
 The detailed reports are regenerated at the 500 ms budget. The 300 ms rows above are kept for comparison.
 
+## Deem-4B on the GPU (added after the main run)
+
+Deem-4B (Q4_K_M, all 33 layers on the GPU via a locally patched `jevalt serve`, ~4 GB of the shared memory pool) on the same 66 test items:
+
+| | exact (real / all) | within one | too little (real) | too much (real) | p50 / p95 idle | p50 / p95 busy |
+|---|---|---|---|---|---|---|
+| flash readout | 70% / 68% | 100% | 16% | 14% | 239 / 326 ms | 359 / 446 ms |
+| **Deem-4B (GPU)** | **66% / 64%** | **100%** | **30%** | 5% | **75 / 130 ms** | **152 / 262 ms** |
+| Decima-small | 45% / 45% | 84% | 0% | 55% | 18 / 62 ms | 21 / 69 ms |
+
+- **Deem is nearly as accurate as flash, and about 3× faster.** It's never off by more than one level either. But it **under-thinks twice as often** (30% vs 16% on real messages), which is the costly direction.
+- **It caught the trap flash missed:** "do it" after the four-step service-split plan → xhigh (flash said low). One item, practice set.
+- **Running it next to flash slows flash.** With both on the GPU at once, as the race would run them, flash went from 239/326 ms (p50/p95) to **298/440 ms**, and 1 of 66 missed the 500 ms budget. Deem itself went to 145/225 ms.
+- **Combining them doesn't help.** Taking the higher of flash's and Deem's answers only cut too-little thinking from 16% to 14% (real messages).
+- **Memory:** Deem's CUDA startup failed once with out-of-memory while the build's page cache was large. With flash at 80% of the pool, only ~8 GB is spare, and Deem takes ~4 GB of it.
+
+**What this means for the router:** flash stays the best judge. Deem is a much better fallback than Decima, but at 500 ms the fallback is almost never used (98–100% flash). Running Deem on every message would cost flash ~60 ms, and Deem would occupy 4 GB of a tight pool. Two reasonable designs:
+1. **Flash + Decima** (current): no extra GPU memory; the fallback is weak but rarely used.
+2. **Deem alone as the classifier**: about 3× faster (p95 130 ms idle) and almost as accurate, but more under-thinking, and 4 GB of GPU memory.
+
 ## Other findings
 
 - **Follow-ups are flash's strength and Decima's weakness.** On follow-ups, flash got 78% exact against Decima's 39%. They're also slower for flash (p50 300 ms idle), because the previous reply makes the input longer.
