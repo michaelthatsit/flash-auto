@@ -7,4 +7,7 @@
 {"type": "message", "id": "u2", "parentId": "a2", "message": {"role": "user", "content": "yes, go ahead"}}
 {"type": "message", "id": "u3", "parentId": "a2", "message": {"role": "user", "content": [{"type": "text", "text": "no, do Y instead"}]}}
 {"type": "message", "id": "u4", "parentId": "a2", "message": {"role": "user", "content": [{"type": "image", "data": "xx", "mimeType": "image/png"}]}}
+{"type": "compaction", "id": "c1", "parentId": "a2", "summary": "..."}
+{"type": "model_change", "id": "m1", "parentId": "c1"}
+{"type": "message", "id": "u5", "parentId": "m1", "message": {"role": "user", "content": "Continue"}}
 {not json

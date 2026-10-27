@@ -38,8 +38,10 @@ export function extractTurns(jsonl: string, fileId: string): Turn[] {
 		} catch {
 			continue;
 		}
-		if (e?.type !== "message" || !e.message?.role) continue;
-		const entry = { id: e.id, parentId: e.parentId ?? null, role: e.message.role, text: textOf(e.message.content) };
+		if (typeof e?.id !== "string") continue;
+		// Non-message entries (compaction, model_change, custom, …) sit in the same parentId tree; keep them as links.
+		const isMessage = e.type === "message" && e.message?.role;
+		const entry = { id: e.id, parentId: e.parentId ?? null, role: isMessage ? e.message.role : "", text: isMessage ? textOf(e.message.content) : "" };
 		byId.set(entry.id, entry);
 		order.push(entry);
 	}

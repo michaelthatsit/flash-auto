@@ -5,12 +5,18 @@ import { extractTurns } from "../bench/turns.ts";
 
 const turns = extractTurns(readFileSync(new URL("./fixtures/session-branchy.jsonl", import.meta.url), "utf8"), "s.jsonl");
 
-test("extracts opener and both branch replies only", () => {
-	assert.deepEqual(turns.map((t) => t.id), ["s.jsonl#u1", "s.jsonl#u2", "s.jsonl#u3"]);
+test("extracts opener, both branch replies and the post-compaction turn", () => {
+	assert.deepEqual(turns.map((t) => t.id), ["s.jsonl#u1", "s.jsonl#u2", "s.jsonl#u3", "s.jsonl#u5"]);
+});
+
+test("walk passes through non-message entries (compaction, model_change)", () => {
+	const t = turns.find((x) => x.id === "s.jsonl#u5")!;
+	assert.equal(t.kind, "follow-up");
+	assert.equal(t.previous, "Plan: do X");
 });
 
 test("branch replies see the text of their parent assistant", () => {
-	for (const t of turns.slice(1)) {
+	for (const t of turns.slice(1, 3)) {
 		assert.equal(t.previous, "Plan: do X");
 		assert.equal(t.kind, "follow-up");
 	}
