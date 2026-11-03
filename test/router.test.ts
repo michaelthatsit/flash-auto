@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { decide, type DecideDeps, type DecideInput } from "../src/router.ts";
+import { decide, ROUTER_BUDGET_MS, type DecideDeps, type DecideInput } from "../src/router.ts";
 import { fromProbs, type Classification } from "../src/types.ts";
 import type { ClassifierInput } from "../src/input.ts";
 
@@ -29,6 +29,9 @@ function deps(over: Partial<DecideDeps> = {}) {
 	return { d, calls };
 }
 const req = (over: Partial<DecideInput>): DecideInput => ({ reason: "user", messages: [], ...over });
+
+// A cold prefix cache or a busy engine pushes a ~350 ms readout past 500 ms.
+test("router budget is 1500 ms", () => assert.equal(ROUTER_BUDGET_MS, 1500));
 
 test("continuation keeps previous level, no calls", async () => {
 	const { d, calls } = deps();
@@ -99,6 +102,7 @@ test("shared deadline covers the running check and classify", async () => {
 	const { d } = deps({
 		isRunning: (signal) => wait(400, true, signal, false),
 		classify: (_i, signal) => wait(300, xhigh, signal, aborted),
+		budgetMs: 500,
 	});
 	const out = await decide(req({ messages: [user("q")] }), d);
 	assert.ok(performance.now() - start < 600);
@@ -107,7 +111,7 @@ test("shared deadline covers the running check and classify", async () => {
 
 test("slow running check counts as not running", async () => {
 	const start = performance.now();
-	const { d, calls } = deps({ isRunning: (signal) => wait(10_000, true, signal, false) });
+	const { d, calls } = deps({ isRunning: (signal) => wait(10_000, true, signal, false), budgetMs: 500 });
 	const out = await decide(req({ messages: [user("q")] }), d);
 	assert.ok(performance.now() - start < 600);
 	assert.deepEqual([out.source, calls.classify], ["fallback", 0]);

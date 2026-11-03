@@ -3,7 +3,7 @@ import { buildClassifierInput, type ClassifierInput } from "./input.ts";
 import type { Classification } from "./types.ts";
 import { isGoAhead } from "./goahead.ts";
 
-export const ROUTER_BUDGET_MS = 500;
+export const ROUTER_BUDGET_MS = 1500;
 const DEFAULT_LEVEL: Level = "medium";
 
 export interface Decision {
