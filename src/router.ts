@@ -94,11 +94,13 @@ function untilAbort<T>(p: Promise<T>, signal: AbortSignal, onAbort: T): Promise<
 /** The spec's routing table. Never throws; every failure path yields a level. */
 export async function decide(input: DecideInput, deps: DecideDeps): Promise<Decision> {
 	const start = performance.now();
-	const fallbackLevel = input.previousLevel ?? DEFAULT_LEVEL;
+	const previousLevel = input.previousLevel ?? DEFAULT_LEVEL;
+	// A failed classification says nothing about this prompt, so it never inherits a low level.
+	const fallbackLevel = DEFAULT_LEVEL;
 	const done = (d: Omit<Decision, "latencyMs">): Decision => ({ ...d, latencyMs: performance.now() - start });
 
-	if (input.reason === "continuation" || input.reason === "retry") return done({ level: fallbackLevel, source: "sticky" });
-	if (input.reason === "direct") return done({ level: fallbackLevel, source: "fallback" });
+	if (input.reason === "continuation" || input.reason === "retry") return done({ level: previousLevel, source: "sticky" });
+	if (input.reason === "direct") return done({ level: previousLevel, source: "fallback" });
 
 	const { typed, runStart } = typedMessage(input.messages);
 	const text = typed >= 0 ? textOf(input.messages[typed].content) : "";

@@ -24,7 +24,7 @@ No wording was changed after the dev run: Decima instruction variants moved dev 
 `spark/flash-auto` is a virtual model: every request goes to `spark/qwen3.8-flash-next`, and flash picks the reasoning level (off / low / medium / xhigh) for each message you type with a one-token readout (~240 ms, 500 ms hard budget).
 
 - **Same level for the whole turn:** tool-call steps and retries reuse it. Short go-ahead replies ("do it", "yes", "continue"…) and messages typed mid-turn keep the previous level.
-- **Never triggers a model swap:** if flash isn't loaded, or the decision fails or takes over 500 ms, it uses the previous level, else medium.
+- **Never triggers a model swap:** if flash isn't loaded, or the decision fails or takes over 500 ms, it uses medium. A failed decision never inherits the previous level, so one low classification can't trap a session at low.
 - **Live status:** the router announces each decision as an extension status (`auto → xhigh`, `auto → medium (fallback)`) before the reply starts. It shows in pi's footer and in pi-web's status row.
 - **Decision log:** `~/.pi/agent/flash-auto.jsonl`, one line per message: level, source, confidence, probabilities, latency. No prompt text.
 - **Installed** as a local pi package: `"../../workspace/flash-auto"` in `~/.pi/agent/settings.json` → `packages`. To disable it, remove that line (backup: `settings.json.bak-2026-10-26`).

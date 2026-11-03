@@ -76,16 +76,16 @@ test("steering keeps previous", async () => {
 	assert.deepEqual([out.level, out.source, calls.running, calls.classify], ["medium", "steering", 0, 0]);
 });
 
-test("not running → fallback, classify never called", async () => {
+test("not running → fallback medium, not the previous level; classify never called", async () => {
 	const { d, calls } = deps({ isRunning: async () => false });
 	const out = await decide(req({ messages: [user("hard question")], previousLevel: "low" }), d);
-	assert.deepEqual([out.level, out.source, out.error, calls.classify], ["low", "fallback", "not running", 0]);
+	assert.deepEqual([out.level, out.source, out.error, calls.classify], ["medium", "fallback", "not running", 0]);
 });
 
-test("classify error → fallback previous", async () => {
+test("classify error → fallback medium, not the previous level", async () => {
 	const { d } = deps({ classify: async () => ({ ok: false, error: "http", detail: "503", latencyMs: 5 }) });
 	const out = await decide(req({ messages: [user("q")], previousLevel: "xhigh" }), d);
-	assert.deepEqual([out.level, out.source], ["xhigh", "fallback"]);
+	assert.deepEqual([out.level, out.source], ["medium", "fallback"]);
 	assert.match(out.error ?? "", /http/);
 });
 
@@ -120,7 +120,7 @@ test("user abort returns promptly with the fallback", async () => {
 	const { d } = deps({ classify: (_i, signal) => wait(10_000, xhigh, signal, aborted) });
 	const out = await decide(req({ messages: [user("q")], signal: ctl.signal, previousLevel: "low" }), d);
 	assert.ok(performance.now() - start < 200);
-	assert.deepEqual([out.level, out.source], ["low", "fallback"]);
+	assert.deepEqual([out.level, out.source], ["medium", "fallback"]);
 });
 
 test("image-only message → fallback, no calls", async () => {
