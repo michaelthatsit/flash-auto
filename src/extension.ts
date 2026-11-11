@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { Api, Model, ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ModelRoute, ModelRouteRequest } from "@earendil-works/pi-coding-agent";
 import type { Level } from "./levels.ts";
-import { AUTO_MODELS, type AutoModel } from "./models.ts";
+import { activeAutoModels, type AutoModel } from "./models.ts";
 import { createFlashClassifier, isFlashRunning } from "./flash.ts";
 import { decide, isLevel, type DecideDeps, type RouterState } from "./router.ts";
 import { LEVELS } from "./levels.ts";
@@ -38,8 +38,6 @@ const toLevel = (l?: ModelThinkingLevel): Level | undefined => (isLevel(l) ? l :
 
 export function createRoute(auto: AutoModel, deps: { decideDeps: DecideDeps; log: (entry: object) => void }) {
 	return async (request: ModelRouteRequest<RouterState>, ctx: RouteCtx): Promise<ModelRoute<RouterState>> => {
-		const model = ctx.modelRegistry.find(auto.provider, auto.physicalId);
-		if (!model) throw new Error(`${auto.virtualId}: ${auto.provider}/${auto.physicalId} is not in pi's model registry`);
 		const previousLevel = toLevel(request.state?.level) ?? toLevel(request.previous?.thinkingLevel);
 		const decided = await decide(
 			{ reason: request.reason, messages: request.messages as DecideInputMessages, previousLevel, signal: request.signal },
@@ -70,17 +68,21 @@ export function createRoute(auto: AutoModel, deps: { decideDeps: DecideDeps; log
 		const prev = request.state;
 		const same = prev && prev.level === d.level && prev.source === d.source && prev.confidence === d.confidence;
 		const state: RouterState = same ? prev : { level: d.level, source: d.source, ...(d.confidence !== undefined ? { confidence: d.confidence } : {}) };
-		return { model, thinkingLevel: d.level, state };
+		// The level implies the engine (targets); a fallback level lands on the entry's own engine.
+		const target = auto.targets?.[d.level] ?? { physicalId: auto.physicalId, thinkingLevel: d.level };
+		const model = ctx.modelRegistry.find(auto.provider, target.physicalId);
+		if (!model) throw new Error(`${auto.virtualId}: ${auto.provider}/${target.physicalId} is not in pi's model registry`);
+		return { model, thinkingLevel: target.thinkingLevel, state };
 	};
 }
 type DecideInputMessages = Parameters<typeof decide>[0]["messages"];
 
 export default function (pi: ExtensionAPI) {
-	for (const auto of AUTO_MODELS) {
-		const flashOpts = { baseUrl: auto.baseUrl, model: auto.swapModel };
-		const classifier = createFlashClassifier(flashOpts);
+	for (const auto of activeAutoModels()) {
+		const classifier = createFlashClassifier({ baseUrl: auto.baseUrl, model: auto.readoutModel });
+		const running = { baseUrl: auto.baseUrl, model: auto.swapModel };
 		const route = createRoute(auto, {
-			decideDeps: { isRunning: (signal) => isFlashRunning(flashOpts, signal), classify: (input, signal) => classifier.classify(input, signal) },
+			decideDeps: { isRunning: (signal) => isFlashRunning(running, signal), classify: (input, signal) => classifier.classify(input, signal) },
 			log: (entry) => appendDecision(DECISION_LOG, entry),
 		});
 		pi.registerVirtualModel<RouterState>({
@@ -88,7 +90,7 @@ export default function (pi: ExtensionAPI) {
 			id: auto.virtualId,
 			name: auto.name,
 			thinkingLevels: ["medium"],
-			contextWindow: 500_000,
+			contextWindow: auto.contextWindow,
 			input: ["text", "image"],
 			route: (request, ctx) => route(request, ctx as RouteCtx),
 		});
