@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import register, { createRoute, type RouteCtx } from "../src/extension.ts";
+import register, { createRoute, FLOOR_ENTRY, type RouteCtx } from "../src/extension.ts";
 import { appendDecision } from "../src/log.ts";
 import { AUTO_MODELS } from "../src/models.ts";
 import type { DecideDeps, RouterState } from "../src/router.ts";
@@ -94,4 +94,21 @@ test("a status failure doesn't break routing", async () => {
 	const ui = { setStatus: () => { throw new Error("no ui"); } };
 	const r = await route(request({}), { ...ctx, ui });
 	assert.equal(r.thinkingLevel, "low");
+});
+
+test("a flash-auto-floor entry on the session branch keeps the level from going below it", async () => {
+	const branch: any[] = [];
+	const floorCtx: RouteCtx = { ...ctx, sessionManager: { getSessionFile: () => "/sessions/s.jsonl", getBranch: () => branch } };
+	const { route, logs } = setup("off");
+	assert.equal((await route(request({}), floorCtx)).thinkingLevel, "off");
+	branch.push({ type: "custom", customType: FLOOR_ENTRY, data: { level: "medium" } });
+	const r = await route(request({}), floorCtx);
+	assert.equal(r.thinkingLevel, "medium");
+	assert.equal(r.state?.level, "medium");
+	assert.equal(logs.at(-1).level, "medium");
+	assert.equal(logs.at(-1).floor, "medium");
+	// A higher classification is left alone; the latest entry wins, and null clears the floor.
+	assert.equal((await setup("xhigh").route(request({}), floorCtx)).thinkingLevel, "xhigh");
+	branch.push({ type: "custom", customType: FLOOR_ENTRY, data: { level: null } });
+	assert.equal((await route(request({}), floorCtx)).thinkingLevel, "off");
 });

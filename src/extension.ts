@@ -7,14 +7,29 @@ import type { Level } from "./levels.ts";
 import { AUTO_MODELS, type AutoModel } from "./models.ts";
 import { createFlashClassifier, isFlashRunning } from "./flash.ts";
 import { decide, isLevel, type DecideDeps, type RouterState } from "./router.ts";
+import { LEVELS } from "./levels.ts";
 import { appendDecision } from "./log.ts";
 
 export const DECISION_LOG = join(homedir(), ".pi", "agent", "flash-auto.jsonl");
 
+/** Custom session entry `{ level: Level | null }`: the router never goes below that level; latest wins, null clears.
+ *  Other extensions write it (pi-web's superpowers switch asks for medium while long skills are in play). */
+export const FLOOR_ENTRY = "flash-auto-floor";
+
+export function floorOf(branch: Iterable<unknown> | undefined): Level | undefined {
+	let floor: Level | undefined;
+	for (const e of branch ?? []) {
+		const entry = e as { type?: string; customType?: string; data?: { level?: unknown } };
+		if (entry.type !== "custom" || entry.customType !== FLOOR_ENTRY) continue;
+		floor = isLevel(entry.data?.level) ? entry.data.level : undefined;
+	}
+	return floor;
+}
+
 /** The slice of pi's extension context the router uses. */
 export interface RouteCtx {
 	modelRegistry: { find(provider: string, id: string): Model<Api> | undefined };
-	sessionManager?: { getSessionFile(): string | undefined };
+	sessionManager?: { getSessionFile(): string | undefined; getBranch?(): Iterable<unknown> };
 	ui?: { setStatus(key: string, text: string | undefined): void };
 }
 
@@ -26,10 +41,12 @@ export function createRoute(auto: AutoModel, deps: { decideDeps: DecideDeps; log
 		const model = ctx.modelRegistry.find(auto.provider, auto.physicalId);
 		if (!model) throw new Error(`${auto.virtualId}: ${auto.provider}/${auto.physicalId} is not in pi's model registry`);
 		const previousLevel = toLevel(request.state?.level) ?? toLevel(request.previous?.thinkingLevel);
-		const d = await decide(
+		const decided = await decide(
 			{ reason: request.reason, messages: request.messages as DecideInputMessages, previousLevel, signal: request.signal },
 			deps.decideDeps,
 		);
+		const floor = floorOf(ctx.sessionManager?.getBranch?.());
+		const d = floor && LEVELS.indexOf(decided.level) < LEVELS.indexOf(floor) ? { ...decided, level: floor } : decided;
 		if (request.reason === "user") {
 			// Announce the level now, before the reply streams; pi only stamps it on the message at the end.
 			try {
@@ -47,6 +64,7 @@ export function createRoute(auto: AutoModel, deps: { decideDeps: DecideDeps; log
 				probs: d.probs,
 				latencyMs: Math.round(d.latencyMs),
 				error: d.error,
+				...(floor ? { floor, classified: decided.level } : {}),
 			});
 		}
 		const prev = request.state;
