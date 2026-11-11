@@ -1,4 +1,5 @@
 // pi extension: registers one auto-routed virtual model per AUTO_MODELS entry (spark/flash-auto).
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { Api, Model, ModelThinkingLevel } from "@earendil-works/pi-ai";
@@ -77,8 +78,17 @@ export function createRoute(auto: AutoModel, deps: { decideDeps: DecideDeps; log
 }
 type DecideInputMessages = Parameters<typeof decide>[0]["messages"];
 
+/** pi's settings, for the router choice; undefined when unreadable (then flash-auto, the long-standing default). */
+export function readSettings(file = join(homedir(), ".pi", "agent", "settings.json")): unknown {
+	try {
+		return JSON.parse(readFileSync(file, "utf8"));
+	} catch {
+		return undefined;
+	}
+}
+
 export default function (pi: ExtensionAPI) {
-	for (const auto of activeAutoModels()) {
+	for (const auto of activeAutoModels(process.env, readSettings())) {
 		const classifier = createFlashClassifier({ baseUrl: auto.baseUrl, model: auto.readoutModel });
 		const running = { baseUrl: auto.baseUrl, model: auto.swapModel };
 		const route = createRoute(auto, {

@@ -44,9 +44,13 @@ export const AUTO_MODELS: AutoModel[] = [
 	},
 ];
 
-/** The virtual models to register: the pair by default, flash-auto only on request. Never both: each router's
- *  fallback dispatches to its own engine, and flash-next and the pair are exclusive in llama-swap. */
-export function activeAutoModels(env: Record<string, string | undefined> = process.env): AutoModel[] {
-	const want = env.PI_FLASH_AUTO === "1" ? "flash-auto" : "pair-auto";
+/** The virtual model to register: the one pi's settings make the default (`defaultModel` ending in `pair-auto`
+ *  selects the pair; anything else, or no settings, keeps flash-auto), with `PI_PAIR_AUTO=1` / `PI_FLASH_AUTO=1`
+ *  as overrides. Never both: each router's fallback dispatches to its own engine, and flash-next and the pair are
+ *  exclusive in llama-swap, so registering the wrong one would swap the serving group on the first prompt. */
+export function activeAutoModels(env: Record<string, string | undefined> = process.env, settings?: unknown): AutoModel[] {
+	const defaultModel = (settings as { defaultModel?: unknown } | undefined)?.defaultModel;
+	const pair = env.PI_FLASH_AUTO === "1" ? false : env.PI_PAIR_AUTO === "1" ? true : typeof defaultModel === "string" && defaultModel.endsWith("pair-auto");
+	const want = pair ? "pair-auto" : "flash-auto";
 	return AUTO_MODELS.filter((m) => m.virtualId === want);
 }

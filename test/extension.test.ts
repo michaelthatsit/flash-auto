@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import register, { createRoute, FLOOR_ENTRY, type RouteCtx } from "../src/extension.ts";
+import register, { createRoute, FLOOR_ENTRY, readSettings, type RouteCtx } from "../src/extension.ts";
 import { appendDecision } from "../src/log.ts";
 import { AUTO_MODELS } from "../src/models.ts";
 import type { DecideDeps, RouterState } from "../src/router.ts";
@@ -71,24 +71,29 @@ test("missing physical model names it", async () => {
 	await assert.rejects(route(request({}), { ...ctx, modelRegistry: { find: () => undefined } }), /spark\/qwen3\.8-flash-next/);
 });
 
-test("registers the active virtual model only: pair-auto by default, flash-auto with PI_FLASH_AUTO=1", () => {
+test("registers the active virtual model only: flash-auto while settings say so, pair-auto with PI_PAIR_AUTO=1 or a pair-auto default", () => {
 	const defs: any[] = [];
-	const saved = process.env.PI_FLASH_AUTO;
-	delete process.env.PI_FLASH_AUTO;
+	const saved = { flash: process.env.PI_FLASH_AUTO, pair: process.env.PI_PAIR_AUTO };
+	delete process.env.PI_PAIR_AUTO;
+	process.env.PI_FLASH_AUTO = "1";
 	try {
 		register({ registerVirtualModel: (d: any) => defs.push(d) } as any);
 		assert.equal(defs.length, 1);
-		assert.deepEqual([defs[0].provider, defs[0].id, defs[0].thinkingLevels, defs[0].contextWindow], ["spark", "pair-auto", ["medium"], 262_144]);
+		assert.deepEqual([defs[0].provider, defs[0].id, defs[0].thinkingLevels, defs[0].contextWindow], ["spark", "flash-auto", ["medium"], 500_000]);
 		assert.equal(typeof defs[0].route, "function");
-		process.env.PI_FLASH_AUTO = "1";
+		delete process.env.PI_FLASH_AUTO;
+		process.env.PI_PAIR_AUTO = "1";
 		register({ registerVirtualModel: (d: any) => defs.push(d) } as any);
 		assert.equal(defs.length, 2);
-		assert.deepEqual([defs[1].id, defs[1].contextWindow], ["flash-auto", 500_000]);
+		assert.deepEqual([defs[1].id, defs[1].contextWindow], ["pair-auto", 262_144]);
 	} finally {
-		if (saved === undefined) delete process.env.PI_FLASH_AUTO;
-		else process.env.PI_FLASH_AUTO = saved;
+		for (const [k, v] of [["PI_FLASH_AUTO", saved.flash], ["PI_PAIR_AUTO", saved.pair]] as const) {
+			if (v === undefined) delete process.env[k];
+			else process.env[k] = v;
+		}
 	}
 });
+
 
 test("announces the decision as a status before the reply", async () => {
 	const statuses: [string, string | undefined][] = [];
@@ -145,4 +150,10 @@ test("pair-auto routes a low decision to the MoE and an xhigh one to the pi tune
 	assert.equal(r.model, tune);
 	assert.equal(r.thinkingLevel, "medium");
 	assert.equal(r.state?.source, "fallback");
+});
+
+test("readSettings returns pi's settings object, or undefined when the file is unreadable", () => {
+	assert.equal(readSettings("/proc/nonexistent/settings.json"), undefined);
+	const s = readSettings() as { defaultModel?: unknown } | undefined;
+	assert.ok(s === undefined || typeof s === "object");
 });
