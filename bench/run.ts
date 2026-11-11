@@ -139,7 +139,7 @@ export function joinExtra(rows: RunRow[], extraFile: string): RunRow[] {
 
 if (import.meta.main) {
 	const { values } = parseArgs({
-		options: { set: { type: "string" }, condition: { type: "string" }, "gap-ms": { type: "string" }, limit: { type: "string" }, out: { type: "string" }, classifier: { type: "string" } },
+		options: { set: { type: "string" }, condition: { type: "string" }, "gap-ms": { type: "string" }, limit: { type: "string" }, out: { type: "string" }, classifier: { type: "string" }, model: { type: "string" } },
 	});
 	const set = values.set as "dev" | "test";
 	const condition = values.condition as "idle" | "busy";
@@ -174,9 +174,10 @@ if (import.meta.main) {
 		condition,
 		outFile: values.out ?? `results/${set}-${condition}.jsonl`,
 		gapMs: values["gap-ms"] ? Number(values["gap-ms"]) : undefined,
-		flash: createFlashClassifier(),
+		// --model runs the one-token readout on another resident model (the agent pair reads out on the 35B-A3B).
+		flash: createFlashClassifier(values.model ? { model: values.model } : {}),
 		decima: createDecimaClassifier(),
-		isFlashRunning: () => isFlashRunning(),
+		isFlashRunning: () => isFlashRunning(values.model ? { model: values.model } : {}),
 		load,
 	});
 	await load?.stop();
