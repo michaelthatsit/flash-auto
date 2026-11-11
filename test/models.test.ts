@@ -2,12 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { activeAutoModels, AUTO_MODELS } from "../src/models.ts";
 
-test("the pair entry targets the tune and reads out on the MoE; the flash entry is unchanged", () => {
+test("the pair entry targets the tune and reads out on it; the flash entry is unchanged", () => {
 	assert.deepEqual(activeAutoModels({}, { defaultModel: "spark/pair-auto" }).map((m) => m.virtualId), ["pair-auto"]);
 	assert.deepEqual(activeAutoModels({ PI_FLASH_AUTO: "1" }, { defaultModel: "spark/pair-auto" }).map((m) => m.virtualId), ["flash-auto"]);
 	const pair = AUTO_MODELS.find((m) => m.virtualId === "pair-auto");
-	assert.equal(pair?.readoutModel, "qwen3.6-35b-a3b-sglang");
-	assert.equal(pair?.swapModel, "qwen3.6-35b-a3b-sglang");
+	// The readout runs on the orchestrator engine: measured 2026-11-11, 73% exact / 100% within one on the frozen set
+	// (the 35B: 55% / 94%), and it never queues behind worker prefills on the 35B (p95 259 s under 4 workers).
+	assert.equal(pair?.readoutModel, "qwen3.8-27b-pi");
+	assert.equal(pair?.swapModel, "qwen3.8-27b-pi");
 	assert.equal(pair?.physicalId, "qwen3.8-27b-pi");
 	const flash = AUTO_MODELS.find((m) => m.virtualId === "flash-auto");
 	assert.equal(flash?.readoutModel, "qwen3.8-flash-next");

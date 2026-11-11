@@ -27,8 +27,10 @@ export const AUTO_MODELS: AutoModel[] = [
 		provider: "spark",
 		physicalId: "qwen3.8-27b-pi",
 		baseUrl: "http://localhost:9000",
-		swapModel: "qwen3.6-35b-a3b-sglang",
-		readoutModel: "qwen3.6-35b-a3b-sglang",
+		// The readout runs on the orchestrator engine (measured 2026-11-11: 73% exact / 100% within one, p50 321 ms,
+		// vs 55% / 94% on the 35B), and that engine never queues behind worker prefills on the 35B.
+		swapModel: "qwen3.8-27b-pi",
+		readoutModel: "qwen3.8-27b-pi",
 		contextWindow: 262_144,
 		targets: PAIR_TARGETS,
 	},
