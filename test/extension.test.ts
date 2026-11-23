@@ -71,21 +71,22 @@ test("missing physical model names it", async () => {
 	await assert.rejects(route(request({}), { ...ctx, modelRegistry: { find: () => undefined } }), /spark\/qwen3\.8-flash-next/);
 });
 
-test("registers the active virtual model only: flash-auto while settings say so, pair-auto with PI_PAIR_AUTO=1 or a pair-auto default", () => {
+test("registers the active Qwen router (flash-auto while settings say so, pair-auto with PI_PAIR_AUTO=1 or a pair-auto default) and inkling-auto beside it", () => {
 	const defs: any[] = [];
 	const saved = { flash: process.env.PI_FLASH_AUTO, pair: process.env.PI_PAIR_AUTO };
 	delete process.env.PI_PAIR_AUTO;
 	process.env.PI_FLASH_AUTO = "1";
 	try {
 		register({ registerVirtualModel: (d: any) => defs.push(d) } as any);
-		assert.equal(defs.length, 1);
+		assert.equal(defs.length, 2);
 		assert.deepEqual([defs[0].provider, defs[0].id, defs[0].thinkingLevels, defs[0].contextWindow], ["spark", "flash-auto", ["medium"], 500_000]);
 		assert.equal(typeof defs[0].route, "function");
+		assert.deepEqual([defs[1].provider, defs[1].id, defs[1].name, defs[1].contextWindow], ["spark", "inkling-auto", "Inkling 2 Mini (auto)", 262_144]);
 		delete process.env.PI_FLASH_AUTO;
 		process.env.PI_PAIR_AUTO = "1";
 		register({ registerVirtualModel: (d: any) => defs.push(d) } as any);
-		assert.equal(defs.length, 2);
-		assert.deepEqual([defs[1].id, defs[1].contextWindow], ["pair-auto", 262_144]);
+		assert.equal(defs.length, 4);
+		assert.deepEqual([defs[2].id, defs[2].contextWindow, defs[3].id], ["pair-auto", 262_144, "inkling-auto"]);
 	} finally {
 		for (const [k, v] of [["PI_FLASH_AUTO", saved.flash], ["PI_PAIR_AUTO", saved.pair]] as const) {
 			if (v === undefined) delete process.env[k];

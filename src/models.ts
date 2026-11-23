@@ -44,15 +44,29 @@ export const AUTO_MODELS: AutoModel[] = [
 		readoutModel: "qwen3.8-flash-next",
 		contextWindow: 500_000,
 	},
+	{
+		// Inkling 2 Mini (Thinking Machines, 26B looped MoE) on vLLM: one engine for every level. The readout renders the
+		// template itself and reads the letter from /v1/completions (src/inkling.ts). Benchmarked 2026-11-22: see README.
+		virtualId: "inkling-auto",
+		name: "Inkling 2 Mini (auto)",
+		provider: "spark",
+		physicalId: "inkling-2-mini",
+		baseUrl: "http://localhost:9000",
+		swapModel: "inkling-2-mini",
+		readoutModel: "inkling-2-mini",
+		contextWindow: 262_144,
+	},
 ];
 
-/** The virtual model to register: the one pi's settings make the default (`defaultModel` ending in `pair-auto`
- *  selects the pair; anything else, or no settings, keeps flash-auto), with `PI_PAIR_AUTO=1` / `PI_FLASH_AUTO=1`
- *  as overrides. Never both: each router's fallback dispatches to its own engine, and flash-next and the pair are
- *  exclusive in llama-swap, so registering the wrong one would swap the serving group on the first prompt. */
+/** The virtual models to register: the Qwen router pi's settings make the default (`defaultModel` ending in
+ *  `pair-auto` selects the pair; anything else, or no settings, keeps flash-auto), with `PI_PAIR_AUTO=1` /
+ *  `PI_FLASH_AUTO=1` as overrides, never both: each router's fallback dispatches to its own engine, and flash-next and
+ *  the pair are exclusive in llama-swap, so registering the wrong one would swap the serving group on the first prompt.
+ *  inkling-auto is registered as well: it is only ever reached by picking it, which swaps to Inkling exactly as picking
+ *  the plain model does. */
 export function activeAutoModels(env: Record<string, string | undefined> = process.env, settings?: unknown): AutoModel[] {
 	const defaultModel = (settings as { defaultModel?: unknown } | undefined)?.defaultModel;
 	const pair = env.PI_FLASH_AUTO === "1" ? false : env.PI_PAIR_AUTO === "1" ? true : typeof defaultModel === "string" && defaultModel.endsWith("pair-auto");
 	const want = pair ? "pair-auto" : "flash-auto";
-	return AUTO_MODELS.filter((m) => m.virtualId === want);
+	return AUTO_MODELS.filter((m) => m.virtualId === want || m.virtualId === "inkling-auto");
 }

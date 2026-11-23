@@ -1,4 +1,4 @@
-// pi extension: registers one auto-routed virtual model per AUTO_MODELS entry (spark/flash-auto).
+// pi extension: registers one auto-routed virtual model per active AUTO_MODELS entry (spark/flash-auto or spark/pair-auto, and spark/inkling-auto).
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -6,7 +6,8 @@ import type { Api, Model, ModelThinkingLevel } from "@earendil-works/pi-ai";
 import type { ExtensionAPI, ModelRoute, ModelRouteRequest } from "@earendil-works/pi-coding-agent";
 import type { Level } from "./levels.ts";
 import { activeAutoModels, type AutoModel } from "./models.ts";
-import { createFlashClassifier, isFlashRunning } from "./flash.ts";
+import { isFlashRunning } from "./flash.ts";
+import { createReadoutClassifier } from "./readout.ts";
 import { decide, isLevel, type DecideDeps, type RouterState } from "./router.ts";
 import { LEVELS } from "./levels.ts";
 import { appendDecision } from "./log.ts";
@@ -89,7 +90,7 @@ export function readSettings(file = join(homedir(), ".pi", "agent", "settings.js
 
 export default function (pi: ExtensionAPI) {
 	for (const auto of activeAutoModels(process.env, readSettings())) {
-		const classifier = createFlashClassifier({ baseUrl: auto.baseUrl, model: auto.readoutModel });
+		const classifier = createReadoutClassifier({ baseUrl: auto.baseUrl, model: auto.readoutModel });
 		const running = { baseUrl: auto.baseUrl, model: auto.swapModel };
 		const route = createRoute(auto, {
 			decideDeps: { isRunning: (signal) => isFlashRunning(running, signal), classify: (input, signal) => classifier.classify(input, signal) },

@@ -2,7 +2,8 @@
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
 import { parseArgs } from "node:util";
 import { buildClassifierInput } from "../src/input.ts";
-import { createFlashClassifier, isFlashRunning, FLASH_PROMPT_VERSION } from "../src/flash.ts";
+import { isFlashRunning, FLASH_PROMPT_VERSION } from "../src/flash.ts";
+import { createReadoutClassifier } from "../src/readout.ts";
 import { createDecimaClassifier, DECIMA_PROMPT_VERSION } from "../src/decima.ts";
 import { createDeemClassifier } from "../src/deem.ts";
 import type { Classification, Classifier } from "../src/types.ts";
@@ -147,7 +148,7 @@ if (import.meta.main) {
 		console.error("usage: node bench/run.ts --set dev|test --condition idle|busy [--gap-ms N --limit N --out file]");
 		process.exit(2);
 	}
-	console.log("Keep qwen3.8-27b / qwen3.6-35b idle during the run (a request to them would swap flash out).");
+	console.log(`Keep the other engines idle during the run (a request to one would swap ${values.model ?? "flash"} out).`);
 	const items = readFileSync("data/testset.jsonl", "utf8").trim().split("\n").map((l) => JSON.parse(l) as LabeledItem).filter((it) => it.split === set)
 		.slice(0, values.limit ? Number(values.limit) : undefined);
 	let load: LoadHandle | undefined;
@@ -174,8 +175,9 @@ if (import.meta.main) {
 		condition,
 		outFile: values.out ?? `results/${set}-${condition}.jsonl`,
 		gapMs: values["gap-ms"] ? Number(values["gap-ms"]) : undefined,
-		// --model runs the one-token readout on another resident model (the agent pair reads out on the 35B-A3B).
-		flash: createFlashClassifier(values.model ? { model: values.model } : {}),
+		// --model runs the one-token readout on another resident model (the pair's tune, Inkling): the row keeps the
+		// `flash` slot, as that is the readout arm whatever engine answers.
+		flash: createReadoutClassifier(values.model ? { model: values.model } : {}),
 		decima: createDecimaClassifier(),
 		isFlashRunning: () => isFlashRunning(values.model ? { model: values.model } : {}),
 		load,
