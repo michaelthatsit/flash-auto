@@ -131,6 +131,30 @@ test("a flash-auto-floor entry on the session branch keeps the level from going 
 	assert.equal((await route(request({}), floorCtx)).thinkingLevel, "off");
 });
 
+test("inkling-auto never runs with thinking off: an off decision becomes low, and the log keeps what was classified", async () => {
+	const INKLING = AUTO_MODELS.find((m) => m.virtualId === "inkling-auto")!;
+	const inkling = { provider: "spark", id: "inkling-2-mini" } as any;
+	const inklingCtx: RouteCtx = { ...ctx, modelRegistry: { find: (_p: string, id: string) => (id === "inkling-2-mini" ? inkling : undefined) } };
+	const logs: any[] = [];
+	const routeAt = (level: "off" | "low" | "xhigh") =>
+		createRoute(INKLING, {
+			decideDeps: { isRunning: async () => true, classify: async () => fromProbs({ off: 0, low: 0, medium: 0, xhigh: 0, [level]: 1 }, 200) },
+			log: (e) => logs.push(e),
+		});
+	const r = await routeAt("off")(request({}), inklingCtx);
+	assert.equal(r.model, inkling);
+	assert.equal(r.thinkingLevel, "low");
+	assert.equal(r.state?.level, "low");
+	assert.equal(logs.at(-1).level, "low");
+	assert.equal(logs.at(-1).classified, "off");
+	assert.equal(logs.at(-1).floor, "low");
+	// A continuation that inherits "off" from before the floor existed is lifted too; higher levels are left alone.
+	assert.equal((await routeAt("off")(request({ reason: "continuation", state: { level: "off", source: "classified" } }), inklingCtx)).thinkingLevel, "low");
+	assert.equal((await routeAt("xhigh")(request({}), inklingCtx)).thinkingLevel, "xhigh");
+	// The Qwen routers keep off.
+	assert.equal((await setup("off").route(request({}), ctx)).thinkingLevel, "off");
+});
+
 test("pair-auto routes a low decision to the MoE and an xhigh one to the pi tune; a failed decision goes to the pi tune at medium", async () => {
 	const pair = AUTO_MODELS.find((m) => m.virtualId === "pair-auto")!;
 	const moe = { provider: "spark", id: "qwen3.6-35b-a3b-sglang" } as any;

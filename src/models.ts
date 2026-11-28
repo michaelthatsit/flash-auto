@@ -18,6 +18,8 @@ export interface AutoModel {
 	contextWindow: number;
 	/** Level → engine and thinking level; absent means every level goes to `physicalId`. */
 	targets?: Record<Level, Target>;
+	/** The lowest level this model ever runs at; a lower decision is raised to it. Absent means `off` is allowed. */
+	minLevel?: Level;
 }
 
 export const AUTO_MODELS: AutoModel[] = [
@@ -55,6 +57,8 @@ export const AUTO_MODELS: AutoModel[] = [
 		swapModel: "inkling-2-mini",
 		readoutModel: "inkling-2-mini",
 		contextWindow: 262_144,
+		// Inkling never runs with thinking off (Michael, 2026-11-27): an `off` readout runs at low.
+		minLevel: "low",
 	},
 ];
 

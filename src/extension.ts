@@ -45,7 +45,9 @@ export function createRoute(auto: AutoModel, deps: { decideDeps: DecideDeps; log
 			{ reason: request.reason, messages: request.messages as DecideInputMessages, previousLevel, signal: request.signal },
 			deps.decideDeps,
 		);
-		const floor = floorOf(ctx.sessionManager?.getBranch?.());
+		// The session's floor entry and the model's own minimum: the higher of the two holds.
+		const sessionFloor = floorOf(ctx.sessionManager?.getBranch?.());
+		const floor = sessionFloor && auto.minLevel ? LEVELS[Math.max(LEVELS.indexOf(sessionFloor), LEVELS.indexOf(auto.minLevel))] : (sessionFloor ?? auto.minLevel);
 		const d = floor && LEVELS.indexOf(decided.level) < LEVELS.indexOf(floor) ? { ...decided, level: floor } : decided;
 		if (request.reason === "user") {
 			// Announce the level now, before the reply streams; pi only stamps it on the message at the end.
@@ -64,7 +66,7 @@ export function createRoute(auto: AutoModel, deps: { decideDeps: DecideDeps; log
 				probs: d.probs,
 				latencyMs: Math.round(d.latencyMs),
 				error: d.error,
-				...(floor ? { floor, classified: decided.level } : {}),
+				...(floor && (sessionFloor || d !== decided) ? { floor, classified: decided.level } : {}),
 			});
 		}
 		const prev = request.state;
